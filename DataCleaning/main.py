@@ -16,6 +16,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import MissingValues
+from random import seed
+from random import randint
 
 #Read and display data in a dataframei
 dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final',       header=1,usecols=[4,5,32,33,34])
@@ -244,6 +246,130 @@ After removal Pearson Coefficient has incrased from 0.58 - 0.61 which is +ive bu
 - Should map off BLAS and CLIV
 - CLIV may contain outlier needs addressing
 - Correlation exists between BLAST and CLIV
+
+Comments from Maria
+
+***Maria Comment Start***
+Can you approximately infer the Blastocyst rate on Day 8 from the Cell Count on Day 8? I don't think so. I can have Blastocyst at day 8 but they can have low number of cells. After fertilization, begins mitosis , dat is a cell division (2 cells, 4 cells, 8 cells). Depending in the oocytes, or spermatozoa, cell cycle may be quick or more slower. So that's why we use cell count as a subjective analysis of embryo quality. But this does not correlate with pregnancy. Only gives us an idea that this
+divisions probably went on a good velocity. This cell count was done only in blastocyst, so this cell are from blastocyst, we do not infer.*
+
+*Can you approximately infer the Blastocyst rate on Day 8 from the Cleavage rate on Day 3? The answer is no. On D3 is a critical day for the embryo. In this point, when it has from 8-16 cells that embryo activate its genome. Until that it user RNAm and proteins that come from the oocytes. So an embryo can starts cleavage, but blocks in this period. Or die during culture days. I would love, that all cleaved embryos develop in a blastocyst. The cleavage rate for us gives me the idea of fertilization rate, I can infer spermatozoa function.*
+
+
+The idea with this project more than predict embryo production is to see if there is any variables from sperm analysis that can predict these production.
+That's why we used so many bulls. Ore research is based on these ideas, the bull effect, which sperm analysis can we do to predict embryo production.
+***Maria Comment End***
+
+I will now do data data cleaning and then EDA on the full data set
 -
+- Look to remove outliers
+- Look to convert not float value to float
+"""
+cols=[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34]
+#Read and display data in a dataframei
+dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final',
+header=1,usecols=cols)
+
+
+#print out data head
+print('\nFull Data Set Info:')
+print(dtfm.info())
+
 
 """
+Data columns (total 30 columns):
+AMOSTRA            314 non-null object => can be replaced by numbers
+REPLICATA          314 non-null object => can be replaced by numbers
+ANIMAL             314 non-null object => can be replaced by numbers
+PARTIDA            314 non-null object => can be replaced by numbers
+SUB_1_RP           314 non-null float64
+SUB_2_H            314 non-null float64
+SUB_3_LS           314 non-null float64
+SUB_4_LP           314 non-null float64
+AI                 314 non-null object => missing values causing it to be an obj
+PI                 314 non-null object => missing values causing it to be an obj
+ALTO               314 non-null object => missing vlaues causing it to be an obj
+FRAG_CRO           314 non-null object => missing values causing it to be an obj
+MOT_PRE            314 non-null int64
+MOT_POS            314 non-null int64
+CONC_CAMARA        314 non-null float64
+VF                 314 non-null float64
+AD                 314 non-null float64
+VAP                314 non-null float64
+VSL                314 non-null float64
+VCL                314 non-null float64
+ALH                314 non-null float64
+BCF                314 non-null float64
+STR                314 non-null int64
+LIN                314 non-null int64
+MOTILE_PCT         314 non-null int64
+PROGRESSIVE_PCT    314 non-null int64
+RAPID_PCT          314 non-null int64
+MEDIUM_PCT         314 non-null int64
+SLOW_PCT           314 non-null int64
+STATIC_PCT         314 non-null int64
+
+"""
+
+
+#convert AI, PI, ALTO and Frag cro  rows from objects to numbers
+dtfm = dtfm.replace('.', np.nan)
+cols=["AMOSTRA", "REPLICATA", "ANIMAL", "PARTIDA"]
+labels=[]
+for index, row in dtfm.iterrows():
+    for col in cols:
+        # some values are strings some values are integers all values are labels
+        # iff not seen before add col[val] to list of values
+        if row[col] not in labels and not type(row[col]) == int:
+            labels.append(row[col])
+
+# convert amostra to numbers
+print("Print Head: {}".format(dtfm.head()))
+print("Print Info: {}".format(dtfm.info()))
+
+# print out a table of colmns and their missing values
+print("\nMissing Value Table:")
+print(MissingValues.missing_values_table(dtfm))
+
+#find outliers
+
+"""
+All data now converted to discreet int or float by removing .
+
+Missing Value Table:
+Your selected dataframe has 30 columns.
+There are 4 columns that have missing values.
+          Missing Values  % of Total Values
+FRAG_CRO              16                5.1
+ALTO                   8                2.5
+AI                     6                1.9
+PI                     6                1.9
+
+
+Now that the tedious — but necessary — step of data cleaning is complete, we can move on to exploring our data! Exploratory Data Analysis (EDA) is an open-ended process where we calculate statistics and make figures to find trends, anomalies, patterns, or relationships within the data.
+In short, the goal of EDA is to learn what our data can tell us. It generally starts out with a high level overview, then narrows in to specific areas as we find interesting parts of the data. The findings may be interesting in their own right, or they can be used to inform our modeling choices, such as by helping us decide which features to use.
+"""
+#Cols with possible outliers
+cols=["AI","PI","ALTO","FRAG_CRO","MOT_PRE","MOT_POS","CONC_CAMARA","VF","AD","VAP","VSL","VCL","ALH","BCF","STR","LIN","MOTILE_PCT","PROGRESSIVE_PCT","RAPID_PCT","MEDIUM_PCT","SLOW_PCT","STATIC_PCT"]
+outlier_frames=[]
+# remove outliers from measured values
+for i in cols:
+    first_q = dtfm[i].describe()['25%']
+    third_q = dtfm[i].describe()['75%']
+    q_range = third_q-first_q
+
+    #print what the CLIV outliers are
+
+    outliers=dtfm[(dtfm[i] < (first_q - 3 * q_range)) | (dtfm[i]  > (third_q + 3 * q_range))]
+    print("\nOutliers {}:".format(i))
+    print(outliers)
+    outlier_frames.append(outliers)
+
+outlier_frames=pd.concat(outlier_frames)
+outlier_frames.to_excel('outliers.xlsx')
+
+"""
+Single Variable Plots
+"""
+
+

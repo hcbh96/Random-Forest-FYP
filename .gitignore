@@ -105,3 +105,10 @@ venv.bak/
 
 # data_folder
 data/
+
+#DS store
+*.DS_Store
+
+#all pictures
+*.png
+
