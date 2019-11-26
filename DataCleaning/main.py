@@ -1,81 +1,37 @@
-""" The title of the project is Optimising Livestock Production
-
-My first step in this project is to identify signs of successful/unsuccessful
-I am using this file to help decipher how I might categorise the various bulls
-into groups including High Fertility
-
-To complete this task I will need to do a couple of things
-1. Clean & Format Data
-2. Convert Data Types and deal with missing data
-3. Single Value Plots on Numerical Variables
-
-Many of the method applied have been learned from https://github.com/WillKoehrsen/machine-learning-project-walkthrough/blob/master/Machine%20Learning%20Project%20Part%201.ipynb
-"""
-# Pandas and numpy for data manipulation
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import MissingValues
-from random import seed
-from random import randint
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from evaluate_model import evaluate_model
+from sklearn.metrics import accuracy_score, confusion_matrix, recall_score, roc_auc_score, multilabel_confusion_matrix
 
-#Read and display data in a dataframei
-dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final',       header=1,usecols=[4,5,32,33,34])
+# Set random seed to ensure reproducible runs
+RSEED = 50
 
-#print out data head
-print('\nInfo:')
-print(dtfm.info())
+# Read in data
+from sklearn.ensemble import RandomForestClassifier
 
-#print out the head
-print('\nHead')
-print(dtfm.head())
+dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1')
 
-#convert output rows from objects to numbers
-dtfm = dtfm.replace('.', np.nan)
+#Remove columns not to be used in modelling
+dtfm = dtfm.drop(columns=['ORDEM','DATA','AMOSTRA','REPLICATA','ANIMAL','PARTIDA','CELLS_COUNT'])
 
-# Subset of column titles that should be numeric
-numeric_cols = ['CLIV','BLAST_D8','CELLS_COUNT']
 
-#Iterate through Columns
-for c in list(dtfm.columns):
-    if (c in numeric_cols):
-        dtfm[c]=dtfm[c].astype(float)
-
-# statistics for each column
-print('\nStatistics for each column')
-print(dtfm.describe())
-
-"""***Aside done after finding the outliers***"""
-# Finding Outliers
-first_q_cliv = dtfm['CLIV'].describe()['25%']
-third_q_cliv = dtfm['CLIV'].describe()['75%']
-q_range_cliv=third_q_cliv-first_q_cliv
-
-#remove CLIV outliers are
-dtfm=dtfm[(dtfm['CLIV'] > (first_q_cliv - 3 * q_range_cliv)) & (dtfm['CLIV'] <           (third_q_cliv + 3 * q_range_cliv))]
-"""***Aside done after finding the outliers***"""
-
-# statistics for each column after removal of outliers
-print('\nStatistics for each column after outlier removal')
-print(dtfm.describe())
-
-# print out a table of colmns and their missing values
-print("\nMissing Value Table:")
-print(MissingValues.missing_values_table(dtfm))
-
+print("Describe Output Vars: \n {}".format(dtfm["BLAST_D8"].describe()))
 """
-- Looking at the Missing Value Table makes me thing that the Cell Count not be worth considering. In order to finalise this I need to be able to reason such information statistically and theoretically from other papers
+One of the thigns i need to do is categorise the output data
+I propose 4 categories 1-4
 
-Statistics for each column
-             CLIV    BLAST_D8  CELLS_COUNT
-count  315.000000  315.000000   182.000000
-mean    71.641566   21.375824   169.472456
-std     10.413697   11.135731    45.469613
-min      0.124075    0.000000     0.250567
-25%     65.039683   11.940299   143.000000
-50%     72.070374   20.270270   169.750000
-75%     79.449472   29.330944   195.000000
-max     90.140845   53.623188   269.000000
+Where:
+- 1 is very poor quality 0 - 25%
+- 2 is poor quality 25 - 50%
+- 3 is good quality 50 - 75%
+- 4 is very good quality 75 - 100%
+
+I will need to do this separately for both CLIV and BLAST_D8
+
+I will use the following statistics to make the decsion:
 
 Statistics for each column after outlier removal
              CLIV    BLAST_D8  CELLS_COUNT
@@ -88,288 +44,248 @@ min     49.350649    0.000000    57.000000
 75%     79.487179   29.629630   195.437500
 max     90.140845   53.623188   269.000000
 
-Missing Value Table:
-Your selected dataframe has 5 columns.
-There are 4 columns that have missing values.
-             Missing Values  % of Total Values
-CELLS_COUNT             135               42.6 -> High level of missing data
-ANIMAL                    3                0.9
-CLIV                      2                0.6
-BLAST_D8                  2                0.6
+
+For BLAST_D8:
+    1 < 12.12
+    2 < 20.31
+    3 < 29.63
+    4 > 53.62
+
+For CLIV:
+    1 < 65.07
+    2 < 72.15
+    3 < 79.49
+    4 > 49.49
+
+I expect I may need to have a play around with RFs i.e should I
+be combining output variables.
+
+In order to do this I will try using RF to categorise three things
+
+1. BLAST_D8 (1-4)
+2. CLIV (1-4)
+3. BLAST + CLIV (1-8) - does doing this affect anything
 
 """
+# Update Labels in Blast_D8 and CLIV
 
-# Probability of the CLIV BLAST_D8 and CELLS_COUNT should all be Gaussian
-fig = plt.figure()#Create fig
-fig.tight_layout()
-
-#plot style
-plt.style.use('seaborn-pastel')
-
-#subplots
-ax1=fig.add_subplot(131)
-ax2=fig.add_subplot(132)
-ax3=fig.add_subplot(133)
-
-#create histograms
-ax1.hist(dtfm['CLIV'].dropna(), bins=100)
-ax2.hist(dtfm['BLAST_D8'].dropna(), bins=100)
-ax3.hist(dtfm['CELLS_COUNT'].dropna(), bins=100)
-
-#x-labels
-ax1.title.set_text('Cleavage Rate D3')
-ax2.title.set_text('Blastocyst Rate D8')
-ax3.title.set_text('Cells Count D3')
-
-#save fig
-plt.savefig('HistOfDepVars')
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] >= 12.12, other=int(1))
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 29.93, other=int(4))
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 20.31, other=int(3))
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 12.12, other=int(2))
 
 
-"""
-There is nothing that spikes concern about the output variables they all seem to follow a Gaussian distribution going on visual inspection.
-
-Next I will look to see if there exists a correlation between the dependent variables as this may allow me to only focus on 1 or two of them rather than all three.
-
-I will attempt to plot correlations between dependents using a Pearson Correlation Coefficient"""
+# Make a copy for dtfm blast
+dtfm_B = dtfm.drop(columns=['CLIV']).copy()
+print("Blast_D8 value counts:\n {}".format(dtfm['BLAST_D8'].value_counts()))
 
 
-# CLIV correlations checker
-corr_cliv = dtfm.corr()['CLIV'].sort_values()
-print('\nCLIV correlations:')
-print(corr_cliv)
+# Extract the labels
+labels = np.array(dtfm_B.pop('BLAST_D8'))
 
-# BLAST correlations checker
-corr_cliv = dtfm.corr()['BLAST_D8'].sort_values()
-print('\nBLAST_D8 correlations:')
-print(corr_cliv)
+# 30% examples in test data
+train, test, train_labels, test_labels = train_test_split(dtfm_B, labels, stratify = labels, test_size = 0.3, random_state = RSEED)
 
-# CELL COUNT correlations checker
-corr_cliv = dtfm.corr()['CELLS_COUNT'].sort_values()
-print('\nCELL_COUNT correlations:')
-print(corr_cliv)
+#imputation of missing values
+train = train.fillna(train.mean())
+test = test.fillna(test.mean())
 
-"""
-Using this Tutorial to help with this section
+# Features for feature importances
+features = list(train.columns)
 
-https://towardsdatascience.com/visualizing-data-with-pair-plots-in-python-f228cf529166"""
-
-# import a visualisation library
-import seaborn as sns
-sns_plot=sns.pairplot(dtfm[['BLAST_D8', 'CELLS_COUNT', 'CLIV']].dropna())
-sns_plot.savefig('DependentPairPlot')
-
-"""
-There exists a correlation between CLIV and BLAST
-
-CLIV correlations:
-CELLS_COUNT    0.164713
-BLAST_D8       0.582693
-CLIV           1.000000
-
-We will look to focus our analysis on CLIV and BLAST at first for the following reasons
-
-- Literature Points towards these being the most important factors
-    - Cleavage, embryo development and blastocyst rates were recorded and compared between Higher and Lower of respective trait groups. Surprisingly, evaluation of isolated effects revealed that lower levels of MB, AI and MP resulted in higher embryo development and blastocyst rates (p<0.05), which was not observed on cleavage rate. We conclude that sperm traits strongly influence embryo development after in vitro fer- tilization (IVF), affecting the zygote competence to achieve blastocyst stage. (Sperm traits on IVP)
-    - Oocyte cleavage rate following
-47 insemination with sperm from high fertility Holstein Friesian bulls was significantly
-48 higher than with sperm from low fertility Holstein Friesian bulls [76.7% (95%CI 60.9
-49 to 89.4) and 55.3 (95%CI 40.4 to 69.7) respectively, P = 0.04]. There was no
-50 significant effect of bull fertility on blastocyst rate [34.7% (95%CI 21.1 to 49.6) and
-51 24.2 % (95%CI 14.1 to 36.0) for the high and low fertility Holstein Friesian bulls,
-52 respectively; P = 0.2]. In conclusion, sperm from high fertility bulls tended to be more
-53 effective in penetrating artificial mucus and to have an increased ability to fertilise
-54 oocytes in vitro; however, once fertilisation occurred subsequent embryo
-55 development was not significantly affected by fertility status. (In Vitro Assesment ...)
-    - Blastocyst rate was higher in the HF group (29.4%) than in the LF (16.0% - P<0.0001), similarly to embryo development rate (HF = 34.0%; HL = 189%; P<0.0001). There was no significant difference in cleavage rate (HF=86.7%; LF= 84.9%; P= 0.2581), neither in embryo kinetics, in all of the evaluated periods (P>0.05).... In conclusion, early embryo kinetics could not explain the difference in blastocyst rate between high fertility (HF) and low fertility (LF) bulls. Nevertheless, HF bulls had
-      more normal fertilization than LF bulls.(Fertilization rate and developmental kinetics of bovine embryos produced using semen from high and low in vitro fertility bulls)
-
-- Blastocyte rate and Clevage seems to have mixed reveiws (this may depend on the species) however both of them seem to produce significant results in some areas and show a correlation in our dataset which is a +ive
-- Our data shows neglegible correlation between CELL_COUNT and blastocyst rate
-- CELL_COUNT is missing 42% of its data
-
-
-I propose taking two variables BLASTOCYST_RATE and CLEVAGE_RATE and looking to build a Random Forest that produces
-    - Continuous expectancy over CLEVAGE/BLAS
-    - Classification of bull into HF or LF - HF CLEV(>76.6) BLAS(29.4) - LF CLEV(69.7 => Upper 95% or 65.04% => Med or 55.3 => Literature) BLAS(16% = Literature, 11% = analysis)
-    - Classification of Embryo in 1234 - Dead, Destroy, Transportable, Exportable
-
-
-    Questions
-        - What is Blastocyst Rate? Does it account for all Embryos that are Transportable/Exportable? Is it the %age of Embryo's that reach Blastocyst
-        - Do the following bounds seem reasonable for you
-            - Classification of bull into HF or LF - HF CLEV(>76.6) BLAS(29.4) - LF CLEV(65.04% => Med or 55.3 => Literature) BLAS(16% = Literature, 12% =        analysis)
-"""
-
-
-# Finding Outliers
-first_q_cliv = dtfm['CLIV'].describe()['25%']
-third_q_cliv = dtfm['CLIV'].describe()['75%']
-q_range_cliv=third_q_cliv-first_q_cliv
-
-#print what the CLIV outliers are
-outliers_cliv=dtfm[(dtfm['CLIV'] < (first_q_cliv - 3 * q_range_cliv)) | (dtfm['CLIV'] > (third_q_cliv + 3 * q_range_cliv))]
-print("\nOutliers CLIV Head:")
-print(outliers_cliv)
-
- # Finding Outliers
-first_q_blast = dtfm['BLAST_D8'].describe()['25%']
-third_q_blast = dtfm['BLAST_D8'].describe()['75%']
-q_range_blast=third_q_blast-first_q_blast
-
-#print what the BLAST outliers are
-outliers_blast=dtfm[(dtfm['BLAST_D8'] < (first_q_blast - 3 * q_range_blast)) | (dtfm['BLAST_D8'] > (third_q_blast + 3 * q_range_blast))]
-print("\nOutliers BLAST Head:")
-print(outliers_blast)
+print("Train Shape: {}".format(train.shape))
+print("Test Shape: {}".format(test.shape))
 
 
 """
-Outlier consideration
+Train decision tree on data with unlimited depth to check for overfitting
 
-Outliers CLIV Head:
-    ANIMAL     BATCH      CLIV   BLAST_D8  CELLS_COUNT
-315    NaN   82308.6  8.942164  11.093061    42.876076
-316    NaN  0.556996  0.124075   0.516549     0.250567
-Outliers BLAST Head:
-Empty DataFrame
-Columns: [ANIMAL, BATCH, CLIV, BLAST_D8, CELLS_COUNT]
-Index: []
-
-
-Should results with marked as CLIV outliers i.e with Rates 8.94216 and 0.124075 be considered outliers that can be removed from the dataset? This is not needed for main AL implementation but is for EDA?
-
-After removal Pearson Coefficient has incrased from 0.58 - 0.61 which is +ive but maybe not realistic what I want to know is if it is realistic?
 """
 
+# Make a decision tree and train
+tree = DecisionTreeClassifier(random_state=RSEED)
 
-"""In conclusion
-
-- Should map off BLAS and CLIV
-- CLIV may contain outlier needs addressing
-- Correlation exists between BLAST and CLIV
-
-Comments from Maria
-
-***Maria Comment Start***
-Can you approximately infer the Blastocyst rate on Day 8 from the Cell Count on Day 8? I don't think so. I can have Blastocyst at day 8 but they can have low number of cells. After fertilization, begins mitosis , dat is a cell division (2 cells, 4 cells, 8 cells). Depending in the oocytes, or spermatozoa, cell cycle may be quick or more slower. So that's why we use cell count as a subjective analysis of embryo quality. But this does not correlate with pregnancy. Only gives us an idea that this
-divisions probably went on a good velocity. This cell count was done only in blastocyst, so this cell are from blastocyst, we do not infer.*
-
-*Can you approximately infer the Blastocyst rate on Day 8 from the Cleavage rate on Day 3? The answer is no. On D3 is a critical day for the embryo. In this point, when it has from 8-16 cells that embryo activate its genome. Until that it user RNAm and proteins that come from the oocytes. So an embryo can starts cleavage, but blocks in this period. Or die during culture days. I would love, that all cleaved embryos develop in a blastocyst. The cleavage rate for us gives me the idea of fertilization rate, I can infer spermatozoa function.*
-
-
-The idea with this project more than predict embryo production is to see if there is any variables from sperm analysis that can predict these production.
-That's why we used so many bulls. Ore research is based on these ideas, the bull effect, which sperm analysis can we do to predict embryo production.
-***Maria Comment End***
-
-I will now do data data cleaning and then EDA on the full data set
--
-- Look to remove outliers
-- Look to convert not float value to float
-"""
-cols=[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34]
-#Read and display data in a dataframei
-dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final',
-header=1,usecols=cols)
-
-
-#print out data head
-print('\nFull Data Set Info:')
-print(dtfm.info())
+# Train tree
+tree.fit(train, train_labels)
+print('Decision tree has {} nodes with maximum depth {}.'.format(tree.tree_.node_count, tree.tree_.max_depth))
 
 
 """
-Data columns (total 30 columns):
-AMOSTRA            314 non-null object => can be replaced by numbers
-REPLICATA          314 non-null object => can be replaced by numbers
-ANIMAL             314 non-null object => can be replaced by numbers
-PARTIDA            314 non-null object => can be replaced by numbers
-SUB_1_RP           314 non-null float64
-SUB_2_H            314 non-null float64
-SUB_3_LS           314 non-null float64
-SUB_4_LP           314 non-null float64
-AI                 314 non-null object => missing values causing it to be an obj
-PI                 314 non-null object => missing values causing it to be an obj
-ALTO               314 non-null object => missing vlaues causing it to be an obj
-FRAG_CRO           314 non-null object => missing values causing it to be an obj
-MOT_PRE            314 non-null int64
-MOT_POS            314 non-null int64
-CONC_CAMARA        314 non-null float64
-VF                 314 non-null float64
-AD                 314 non-null float64
-VAP                314 non-null float64
-VSL                314 non-null float64
-VCL                314 non-null float64
-ALH                314 non-null float64
-BCF                314 non-null float64
-STR                314 non-null int64
-LIN                314 non-null int64
-MOTILE_PCT         314 non-null int64
-PROGRESSIVE_PCT    314 non-null int64
-RAPID_PCT          314 non-null int64
-MEDIUM_PCT         314 non-null int64
-SLOW_PCT           314 non-null int64
-STATIC_PCT         314 non-null int64
+Aseess decision tree performance
+
+I would expect this to overfit but we want to make sure
+"""
+
+# Make probability predictions
+train_probs = tree.predict_proba(train)[:, 1]
+probs = tree.predict_proba(test)[:, 1]
+
+train_predictions = tree.predict(train)
+predictions = tree.predict(test)
+
+confusion = confusion_matrix(test_labels,predictions)
+
+print("Confusion Matrix:\n{}".format(confusion))
+
+accuracy = accuracy_score(test_labels, predictions)
+print("Classification Accuracy: {}".format(accuracy))
+
+sensitivity = recall_score(test_labels, predictions, average='micro')
+print("Classification Sensitivity: {}".format(sensitivity))
+
+"""
+Confusion Matrix:
+[[17  1  2  2]
+ [ 1 18  0  3]
+ [ 1  6 13  3]
+ [ 4  0  4 14]]
+Classification Accuracy: 0.6966292134831461
+Classification Sensitivity: 0.6966292134831461
+
+From a single with a confusion matrix we can see above Accuracy and Sesitivity
+
+These should form our base projection or possibly projections from Mayra?
+
+Should we instead maybe take two classes as this would allow the plotting of
+ROC curves etc -
+
+Mayra mentioned that
+
+
+**The idea with this project more than predict embryo production is to see if there is any variables from sperm analysis that can predict these production.
+That's why we used so many bulls. Ore research is based on these ideas, the bull effect, which sperm analysis can we do to predict embryo production. **
+
+Consider this when deciding whether to use binary or non binary classification
+
+Let check out feature importance in the decision tree
+"""
+fi = pd.DataFrame({'feature': features,
+                   'importance': tree.feature_importances_}).\
+                    sort_values('importance', ascending = False)
+print("Features of most importance in decision tree: \n{}".format(fi.head()))
+
+"""
+This porucdes the following results
+
+Features of most importance in decision tree:
+        feature  importance
+11  CONC_CAMARA    0.103933
+2       SUB_2_H    0.093753
+12           VF    0.092308
+26   STATIC_PCT    0.068019
+7          ALTO    0.067272
+
+I want to at some point check co-linearity between the above variables.
 
 """
 
 
-#convert AI, PI, ALTO and Frag cro  rows from objects to numbers
-dtfm = dtfm.replace('.', np.nan)
-cols=["AMOSTRA", "REPLICATA", "ANIMAL", "PARTIDA"]
-labels=[]
-for index, row in dtfm.iterrows():
-    for col in cols:
-        # some values are strings some values are integers all values are labels
-        # iff not seen before add col[val] to list of values
-        if row[col] not in labels and not type(row[col]) == int:
-            labels.append(row[col])
+"""
+Random Forest to check if classification improves
+"""
+# Create the model with 100 trees
+model = RandomForestClassifier(n_estimators=100,
+                               random_state=RSEED,
+                               max_features = 'sqrt',
+                               n_jobs=-1, verbose = 1)
 
-# convert amostra to numbers
-print("Print Head: {}".format(dtfm.head()))
-print("Print Info: {}".format(dtfm.info()))
 
-# print out a table of colmns and their missing values
-print("\nMissing Value Table:")
-print(MissingValues.missing_values_table(dtfm))
+# Fit on training data
+model.fit(train, train_labels)
 
-#find outliers
+#Calculate the avg number of nodes per tree
+n_nodes = []
+max_depths = []
+
+for ind_tree in model.estimators_:
+    n_nodes.append(ind_tree.tree_.node_count)
+    max_depths.append(ind_tree.tree_.max_depth)
+
+print(f'Average number of nodes {int(np.mean(n_nodes))}')
+print(f'Average maximum depth {int(np.mean(max_depths))}')
 
 """
-All data now converted to discreet int or float by removing .
+Average number of nodes 94
+Average maximum depth 11
 
-Missing Value Table:
-Your selected dataframe has 30 columns.
-There are 4 columns that have missing values.
-          Missing Values  % of Total Values
-FRAG_CRO              16                5.1
-ALTO                   8                2.5
-AI                     6                1.9
-PI                     6                1.9
-
-
-Now that the tedious — but necessary — step of data cleaning is complete, we can move on to exploring our data! Exploratory Data Analysis (EDA) is an open-ended process where we calculate statistics and make figures to find trends, anomalies, patterns, or relationships within the data.
-In short, the goal of EDA is to learn what our data can tell us. It generally starts out with a high level overview, then narrows in to specific areas as we find interesting parts of the data. The findings may be interesting in their own right, or they can be used to inform our modeling choices, such as by helping us decide which features to use.
+Test results against Base
 """
-#Cols with possible outliers
-cols=["AI","PI","ALTO","FRAG_CRO","MOT_PRE","MOT_POS","CONC_CAMARA","VF","AD","VAP","VSL","VCL","ALH","BCF","STR","LIN","MOTILE_PCT","PROGRESSIVE_PCT","RAPID_PCT","MEDIUM_PCT","SLOW_PCT","STATIC_PCT"]
-outlier_frames=[]
-# remove outliers from measured values
-for i in cols:
-    first_q = dtfm[i].describe()['25%']
-    third_q = dtfm[i].describe()['75%']
-    q_range = third_q-first_q
+train_rf_predictions = model.predict(train)
+train_rf_probs = model.predict_proba(train)[:, 1]
 
-    #print what the CLIV outliers are
+rf_predictions = model.predict(test)
+rf_probs = model.predict_proba(test)[:, 1]
 
-    outliers=dtfm[(dtfm[i] < (first_q - 3 * q_range)) | (dtfm[i]  > (third_q + 3 * q_range))]
-    print("\nOutliers {}:".format(i))
-    print(outliers)
-    outlier_frames.append(outliers)
+# Make probability predictions
 
-outlier_frames=pd.concat(outlier_frames)
-outlier_frames.to_excel('outliers.xlsx')
+confusion = confusion_matrix(test_labels,rf_predictions)
+print("Confusion Matrix:\n{}".format(confusion))
+
+accuracy = accuracy_score(test_labels, rf_predictions)
+print("Classification Accuracy: {}".format(accuracy))
+
+sensitivity = recall_score(test_labels, rf_predictions, average='micro')
+print("Classification Sensitivity: {}".format(sensitivity))
 
 """
-Single Variable Plots
+Produces the following:
+
+Confusion Matrix:
+[[17  3  2  0]
+ [ 2 17  0  3]
+ [ 1  5 15  2]
+ [ 4  1  3 14]]
+Classification Accuracy: 0.7078651685393258
+Classification Sensitivity: 0.7078651685393258
 """
 
+fi_model = pd.DataFrame({'feature': features,
+                   'importance': model.feature_importances_}).\
+                    sort_values('importance', ascending = False)
+print("Features of most importance in RF:\n{}".format(fi_model.head(10)))
 
+
+"""
+Features of most importance in RF:
+        feature  importance
+5            AI    0.068131
+11  CONC_CAMARA    0.060125
+12           VF    0.047324
+8      FRAG_CRO    0.043618
+13           AD    0.043218
+26   STATIC_PCT    0.042707
+7          ALTO    0.042087
+14          VAP    0.040594
+1      SUB_1_RP    0.038761
+2       SUB_2_H    0.037506
+
+Maybe do a co-linearity check between variables again
+"""
+
+"""
+Optimising input params
+"""
+
+# Hyperparameter grid
+param_grid = {
+    'n_estimators': np.linspace(10, 200).astype(int),
+    'max_depth': [None] + list(np.linspace(3, 20).astype(int)),
+    'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
+    'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
+    'min_samples_split': [2, 5, 10],
+    'bootstrap': [True, False]
+}
+
+# Estimator for use in random search
+estimator = RandomForestClassifier(random_state = RSEED)
+
+# Create the random search model
+rs = RandomizedSearchCV(estimator, param_grid, n_jobs = -1,
+                        scoring = ['accuracy'], cv = 3,
+                        n_iter = 10, verbose = 1, random_state=RSEED,
+                        refit=False)
+
+# Fit
+rs.fit(train, train_labels)
+
+print("Best params: {}".format(rs))
