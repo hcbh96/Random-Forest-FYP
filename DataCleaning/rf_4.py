@@ -5,12 +5,12 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from evaluate_model import evaluate_model
 from sklearn.metrics import accuracy_score, confusion_matrix, recall_score, roc_auc_score, multilabel_confusion_matrix
-from collections import Counter
-from confusion_matrix import plot_confusion_matrix
-from sklearn.ensemble import RandomForestClassifier
 
 # Set random seed to ensure reproducible runs
 RSEED = 50
+
+# Read in data
+from sklearn.ensemble import RandomForestClassifier
 
 dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1')
 
@@ -24,13 +24,12 @@ One of the thigns i need to do is categorise the output data
 I propose 4 categories 1-4
 
 Where:
-- 0 is bad quality 0 - 50%
-- 1 is good quality 50 - 100%
+- 1 is very poor quality 0 - 25%
+- 2 is poor quality 25 - 50%
+- 3 is good quality 50 - 75%
+- 4 is very good quality 75 - 100%
 
-Blast_D8 is the most important measurement:
-    -
-    -
-    -
+I will need to do this separately for both CLIV and BLAST_D8
 
 I will use the following statistics to make the decsion:
 
@@ -47,16 +46,33 @@ max     90.140845   53.623188   269.000000
 
 
 For BLAST_D8:
-    0 < 20.31
-    1 >= 20.31
+    1 < 12.12
+    2 < 20.31
+    3 < 29.63
+    4 > 53.62
 
-1. BLAST_D8 (0-1)
+For CLIV:
+    1 < 65.07
+    2 < 72.15
+    3 < 79.49
+    4 > 49.49
+
+I expect I may need to have a play around with RFs i.e should I
+be combining output variables.
+
+In order to do this I will try using RF to categorise three things
+
+1. BLAST_D8 (1-4)
+2. CLIV (1-4)
+3. BLAST + CLIV (1-8) - does doing this affect anything
 
 """
 # Update Labels in Blast_D8 and CLIV
 
-dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] >= 20.31, other=0)
-dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 20.31, other=1)
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] >= 12.12, other=int(1))
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 29.93, other=int(4))
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 20.31, other=int(3))
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 12.12, other=int(2))
 
 
 # Make a copy for dtfm blast
@@ -117,27 +133,14 @@ print("Classification Accuracy: {}".format(accuracy))
 sensitivity = recall_score(test_labels, predictions, average='micro')
 print("Classification Sensitivity: {}".format(sensitivity))
 
-print(f'Train ROC AUC Score: {roc_auc_score(train_labels, train_probs)}')
-print(f'Test ROC AUC  Score: {roc_auc_score(test_labels, probs)}')
-
-print(f'Baseline ROC AUC: {roc_auc_score(test_labels, [1 for _ in range(len(test_labels))])}')
-
-print(Counter(probs))
-print(Counter(predictions))
-
-# evaluate model
-evaluate_model(predictions, probs, train_predictions, train_probs, test_labels, train_labels, title='Tree ROC Curve')
-
-# Plot confusion matrix
-cm = confusion_matrix(test_labels, predictions)
-plot_confusion_matrix(cm, classes = ['Poor Health', 'Good Health'],
-                      title = 'Tree Confusion Matrix')
 """
 Confusion Matrix:
-[[35  9]
- [10 35]]
-Classification Accuracy: 0.7865168539325843
-Classification Sensitivity: 0.7865168539325843
+[[17  1  2  2]
+ [ 1 18  0  3]
+ [ 1  6 13  3]
+ [ 4  0  4 14]]
+Classification Accuracy: 0.6966292134831461
+Classification Sensitivity: 0.6966292134831461
 
 From a single with a confusion matrix we can see above Accuracy and Sesitivity
 
@@ -159,20 +162,18 @@ Let check out feature importance in the decision tree
 fi = pd.DataFrame({'feature': features,
                    'importance': tree.feature_importances_}).\
                     sort_values('importance', ascending = False)
-
 print("Features of most importance in decision tree: \n{}".format(fi.head()))
 
 """
 This porucdes the following results
 
 Features of most importance in decision tree:
-     feature  importance
-17       ALH    0.151271
-3   SUB_3_LS    0.145387
-8   FRAG_CRO    0.079971
-18       BCF    0.077984
-20       LIN    0.065810
-
+        feature  importance
+11  CONC_CAMARA    0.103933
+2       SUB_2_H    0.093753
+12           VF    0.092308
+26   STATIC_PCT    0.068019
+7          ALTO    0.067272
 
 I want to at some point check co-linearity between the above variables.
 
@@ -204,8 +205,8 @@ print(f'Average number of nodes {int(np.mean(n_nodes))}')
 print(f'Average maximum depth {int(np.mean(max_depths))}')
 
 """
-Average number of nodes 59
-Average maximum depth 10
+Average number of nodes 94
+Average maximum depth 11
 
 Test results against Base
 """
@@ -226,28 +227,21 @@ print("Classification Accuracy: {}".format(accuracy))
 sensitivity = recall_score(test_labels, rf_predictions, average='micro')
 print("Classification Sensitivity: {}".format(sensitivity))
 
-# evaluate model
-evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs, test_labels, train_labels, title='Forest ROC')
-
-# Plot confusion matrix
-cm = confusion_matrix(test_labels, rf_predictions)
-plot_confusion_matrix(cm, classes = ['Poor Health', 'Good Health'],
-                       title = 'Forest Confusion Matrix')
-
 """
 Produces the following:
 
 Confusion Matrix:
-[[41  3]
- [ 7 38]]
-Classification Accuracy: 0.8876404494382022
-Classification Sensitivity: 0.8876404494382022
+[[17  3  2  0]
+ [ 2 17  0  3]
+ [ 1  5 15  2]
+ [ 4  1  3 14]]
+Classification Accuracy: 0.7078651685393258
+Classification Sensitivity: 0.7078651685393258
 """
 
 fi_model = pd.DataFrame({'feature': features,
                    'importance': model.feature_importances_}).\
                     sort_values('importance', ascending = False)
-
 print("Features of most importance in RF:\n{}".format(fi_model.head(10)))
 
 
@@ -287,36 +281,11 @@ estimator = RandomForestClassifier(random_state = RSEED)
 
 # Create the random search model
 rs = RandomizedSearchCV(estimator, param_grid, n_jobs = -1,
-                        scoring = 'roc_auc', cv = 3,
-                        n_iter = 10, verbose = 1, random_state=RSEED)
+                        scoring = ['accuracy'], cv = 3,
+                        n_iter = 10, verbose = 1, random_state=RSEED,
+                        refit=False)
 
 # Fit
 rs.fit(train, train_labels)
 
-print("Best params:\n{}".format(rs.best_params_))
-
-# Try using the best model
-best_model = rs.best_estimator_
-
-train_rf_predictions = best_model.predict(train)
-train_rf_probs = best_model.predict_proba(train)[:, 1]
-
-rf_predictions = best_model.predict(test)
-rf_probs = best_model.predict_proba(test)[:, 1]
-
-n_nodes = []
-max_depths = []
-
-for ind_tree in best_model.estimators_:
-    n_nodes.append(ind_tree.tree_.node_count)
-    max_depths.append(ind_tree.tree_.max_depth)
-
-print(f'Average number of nodes {int(np.mean(n_nodes))}')
-print(f'Average maximum depth {int(np.mean(max_depths))}')
-
-evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs,test_labels, train_labels, title='Optimised Forest ROC Curve')
-
-# Plot confusion matrix
-cm = confusion_matrix(test_labels, rf_predictions)
-plot_confusion_matrix(cm, classes = ['Poor Health', 'Good Health'],
-                       title = 'Optimised Forest Confusion Matrix')
+print("Best params: {}".format(rs))

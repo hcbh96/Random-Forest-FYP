@@ -1,4 +1,7 @@
-def evaluate_model(predictions, probs, train_predictions, train_probs):
+from sklearn.metrics import recall_score, precision_score, roc_auc_score, roc_curve
+import matplotlib.pyplot as plt
+
+def evaluate_model(predictions, probs, train_predictions, train_probs, test_labels, train_labels, title='ROC Plot'):
     """Compare machine learning model to baseline performance.
     Computes statistics and shows ROC curve."""
 
@@ -33,4 +36,5 @@ def evaluate_model(predictions, probs, train_predictions, train_probs):
     plt.plot(base_fpr, base_tpr, 'b', label = 'baseline')
     plt.plot(model_fpr, model_tpr, 'r', label = 'model')
     plt.legend();
-    plt.xlabel('False Positive Rate'); plt.ylabel('True Positive Rate'); plt.title('ROC Curves');
+    plt.xlabel('False Positive Rate'); plt.ylabel('True Positive Rate'); plt.title(title);
+    plt.savefig(title)
