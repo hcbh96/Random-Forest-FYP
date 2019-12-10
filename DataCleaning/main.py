@@ -148,7 +148,6 @@ ROC curves etc -
 
 Mayra mentioned that
 
-
 **The idea with this project more than predict embryo production is to see if there is any variables from sperm analysis that can predict these production.
 That's why we used so many bulls. Ore research is based on these ideas, the bull effect, which sperm analysis can we do to predict embryo production. **
 
