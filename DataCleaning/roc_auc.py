@@ -53,6 +53,9 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
     train = train.fillna(train.mean())
     test = test.fillna(test.mean())
 
+    # Features for feature importances
+    features = list(train.columns)
+
     # Hyperparameter grid
     param_grid = {
         'n_estimators': np.linspace(10, 200).astype(int),
@@ -90,11 +93,19 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
     if logger:
         print("ROC AUC Score=",auc)
 
+    # calculate variables of most importance in model
+    fi_model = pd.DataFrame({'feature': features,
+                'importance': best_model.feature_importances_}).\
+                sort_values('importance', ascending = False)
+
+    if logger:
+        print("Features of most importance in RF:\n{}".format(fi_model.head(3)))
+        print("Features of least importance in RF: \n{}".format(fi_model.tail(3)))
     return auc
 
 if __name__ == "__main__":
     # read in dataframe
-    dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1')
+    dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1', index_col=0)
     # remove columns not being used
     dtfm = dtfm.drop(columns=['ORDEM','DATA','AMOSTRA','REPLICATA','ANIMAL','PARTIDA','CELLS_COUNT', 'CLIV'])
     #describe Blast_D8 output vars

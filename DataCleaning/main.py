@@ -15,7 +15,7 @@ RSEED = 50
 dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1')
 
 #Remove columns not to be used in modelling
-dtfm = dtfm.drop(columns=['ORDEM','DATA','AMOSTRA','REPLICATA','ANIMAL','PARTIDA','CELLS_COUNT'])
+dtfm = dtfm.drop(columns=['ORDEM','DATA','AMOSTRA','REPLICATA','ANIMAL','PARTIDA','CLIV','CELLS_COUNT'])
 
 
 print("Describe Output Vars: \n {}".format(dtfm["BLAST_D8"].describe()))
@@ -47,28 +47,27 @@ max     90.140845   53.623188   269.000000
 
 
 For BLAST_D8:
-    0 < 20.31
-    1 >= 20.31
+    0 < 21.475320
+    1 >= 21.475320
 
 1. BLAST_D8 (0-1)
 
 """
 # Update Labels in Blast_D8 and CLIV
 
-dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] >= 20.31, other=0)
-dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 20.31, other=1)
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] >= 21.475320, other=0)
+dtfm['BLAST_D8'] = dtfm['BLAST_D8'].where(dtfm['BLAST_D8'] < 21.475320, other=1)
 
 
 # Make a copy for dtfm blast
-dtfm_B = dtfm.drop(columns=['CLIV']).copy()
 print("Blast_D8 value counts:\n {}".format(dtfm['BLAST_D8'].value_counts()))
 
 
 # Extract the labels
-labels = np.array(dtfm_B.pop('BLAST_D8'))
+labels = np.array(dtfm.pop('BLAST_D8'))
 
 # 30% examples in test data
-train, test, train_labels, test_labels = train_test_split(dtfm_B, labels, stratify = labels, test_size = 0.3, random_state = RSEED)
+train, test, train_labels, test_labels = train_test_split(dtfm, labels, stratify = labels, test_size = 0.3, random_state = RSEED)
 
 #imputation of missing values
 train = train.fillna(train.mean())

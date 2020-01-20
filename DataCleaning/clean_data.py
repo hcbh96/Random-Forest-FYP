@@ -19,7 +19,7 @@ from MissingValues import missing_values_table
 from random import seed
 from random import randint
 
-#Read and display data in a dataframei
+#Read and display data in a dataframe
 dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final',       header=1,usecols=[4,5,32,33,34])
 
 #print out data head
@@ -52,7 +52,7 @@ third_q_cliv = dtfm['CLIV'].describe()['75%']
 q_range_cliv=third_q_cliv-first_q_cliv
 
 #remove CLIV outliers are
-dtfm=dtfm[(dtfm['CLIV'] > (first_q_cliv - 3 * q_range_cliv)) & (dtfm['CLIV'] <           (third_q_cliv + 3 * q_range_cliv))]
+dtfm=dtfm[(dtfm['CLIV'] > (first_q_cliv - 3 * q_range_cliv)) & (dtfm['CLIV'] < (third_q_cliv + 3 * q_range_cliv))]
 """***Aside done after finding the outliers***"""
 
 # statistics for each column after removal of outliers
@@ -198,6 +198,8 @@ I propose taking two variables BLASTOCYST_RATE and CLEVAGE_RATE and looking to b
         - What is Blastocyst Rate? Does it account for all Embryos that are Transportable/Exportable? Is it the %age of Embryo's that reach Blastocyst
         - Do the following bounds seem reasonable for you
             - Classification of bull into HF or LF - HF CLEV(>76.6) BLAS(29.4) - LF CLEV(65.04% => Med or 55.3 => Literature) BLAS(16% = Literature, 12% =        analysis)
+
+It turns out that Blastocyst rate is essentially a more latent measurment of embryo health than Cleavage rate, i.e only cells that have been through cleavage will have a blastocyst rate therefore there is a correlation. This also means that it is better to record data against the level of Blastocyst rate.
 """
 
 
@@ -261,7 +263,6 @@ That's why we used so many bulls. Ore research is based on these ideas, the bull
 ***Maria Comment End***
 
 I will now do data data cleaning and then EDA on the full data set
--
 - Look to remove outliers
 - Look to convert not float value to float
 """
@@ -407,8 +408,8 @@ dtfm.to_excel('cleaned_data.xlsx')
 
 """
 
- Now that the tedious — but necessary — step of data cleaning is complete, we  can move on to exploring our data! Exploratory Data Analysis (EDA) is an      open-ended process where we calculate statistics and make figures to find     trends, anomalies, patterns, or relationships within the data.
- In short, the goal of EDA is to learn what our data can tell us. It           generally starts out with a high level overview, then narrows in to specific  areas as we find interesting parts of the data. The findings may be           interesting in their own right, or they can be used to inform our modeling    choices, such as by helping us decide which features to use.
+Now that the tedious — but necessary — step of data cleaning is complete, we  can move on to exploring our data! Exploratory Data Analysis (EDA) is an      open-ended process where we calculate statistics and make figures to find     trends, anomalies, patterns, or relationships within the data.
+In short, the goal of EDA is to learn what our data can tell us. It           generally starts out with a high level overview, then narrows in to specific  areas as we find interesting parts of the data. The findings may be           interesting in their own right, or they can be used to inform our modeling    choices, such as by helping us decide which features to use.
 
 """
 

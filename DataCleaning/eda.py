@@ -15,7 +15,6 @@ import seaborn as sns
 #Read and display data in a dataframei
 dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1')
 
-
 """
 Single Variable Plots
 """
@@ -38,7 +37,6 @@ Pearson Correlation Coefficient
 
 While the correlation coefficient cannot capture non-linear relationships, it is a good way to start figuring out how variables are related. In Pandas, we can easily calculate the correlations between any columns in a dataframe:
 """
-
 
 #Create Data frame with dependents and Cell_count
 dtfm_CELLS_COUNT=dtfm.drop(["ORDEM", "DATA", "AMOSTRA","REPLICATA","ANIMAL","PARTIDA","CLIV","BLAST_D8"], axis=1)
@@ -122,7 +120,7 @@ def correlation_heatmap(train):
     plt.show();
 
 
-#correlation_heatmap(dtfm)
+correlation_heatmap(dtfm)
 
 
 
