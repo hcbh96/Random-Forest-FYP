@@ -15,7 +15,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from evaluate_model import evaluate_model
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 
 def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=False):
     """Returns the roc_auc for an optimised Random Forest
@@ -95,13 +95,13 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
 
     # calculate variables of most importance in model
     fi_model = pd.DataFrame({'feature': features,
-                'importance': best_model.feature_importances_}).\
-                sort_values('importance', ascending = False)
+                'importance': best_model.feature_importances_})
 
     if logger:
         print("Features of most importance in RF:\n{}".format(fi_model.head(3)))
         print("Features of least importance in RF: \n{}".format(fi_model.tail(3)))
-    return auc
+
+    return [auc, fi_model]
 
 if __name__ == "__main__":
     # read in dataframe
@@ -113,10 +113,12 @@ if __name__ == "__main__":
     # create a linspace of 10 points between mu-2sd and mu+2sd
     mean = desc_blast['mean']
     std = desc_blast['std']
-    threasholds = np.linspace(mean - 1.5 * std, mean + 1.5 * std, 10)
+    threasholds = np.linspace(mean - 1.5 * std, mean + 1.5 * std, 5)
     print("Threasholds at which we'll calculte ROC_AUC: \n {}".format(threasholds))
     # ROC_AUC array
     roc_auc_arr = []
+    fi_dtfm = pd.DataFrame()
+    dtfm_index = 0
 
     #create loop
     for threashold in threasholds:
@@ -127,13 +129,42 @@ if __name__ == "__main__":
         dtfm_temp['BLAST_D8'] = dtfm_temp['BLAST_D8'].where(dtfm['BLAST_D8'] < threashold, other=1)
 
         # run roc_auc func
-        score = roc_auc(dtfm_temp, 'BLAST_D8', random_state=50, logger=True)
+        [score, fi] = roc_auc(dtfm_temp, 'BLAST_D8', random_state=50, logger=False)
+
+        if dtfm_index == 0:
+            fi_dtfm.insert(0, 'feature', fi.feature)
+
+        fi_dtfm.insert(dtfm_index + 1, round(threashold, 2),fi.importance)
+        dtfm_index += 1
         roc_auc_arr.append(score)
 
 
+
     # plot roc_auc curve against threashold values
-    plt.plot(threasholds, roc_auc_arr)
-    plt.ylabel('ROC_AUC')
-    plt.xlabel('Threashold')
-    plt.ylim(0,1)
+    # plt.plot(threasholds, roc_auc_arr)
+    # plt.ylabel('ROC_AUC')
+    # plt.xlabel('Threashold')
+    # plt.ylim(0,1)
+    # plt.show()
+
+    # redefine index
+    fi_dtfm = fi_dtfm.set_index('feature')
+    fi_dtfm['mean'] = fi_dtfm.mean(axis=1)
+    fi_dtfm = fi_dtfm.sort_values('mean', 0, ascending=True)
+    fi_dtfm = fi_dtfm.transpose()
+
+    # plot box plot of most important to least important vars
+    boxplot = fi_dtfm.drop('mean').boxplot(rot=90)
+    plt.ylabel('Blastocyst Threashold')
+    plt.xlabel('Feature')
+    plt.tight_layout()
     plt.show()
+
+    # plot heatmap of most to least important vars
+    sns.heatmap(fi_dtfm)
+    plt.xlabel('Feature')
+    plt.ylabel('Blastocyt Threashold')
+    plt.tight_layout()
+    #plt.show()
+
+
