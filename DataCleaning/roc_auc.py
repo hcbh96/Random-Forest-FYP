@@ -36,6 +36,7 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
         roc_auc: (scalar) Area under the receiver operating
             charachteristic curve
     """
+
     dtfm_labels = dtfm.pop(labels_col)
     # separate the labels from the data
     labels = np.array(dtfm_labels)
@@ -46,7 +47,7 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
         print("Output value count:\n {}".format(dtfm_labels.value_counts()))
 
     # split data into train and test sets split% test
-    train, test, train_labels, test_labels = train_test_split(dtfm,labels, stratify = labels, test_size = test_size, random_state=random_state)
+    train, test, train_labels, test_labels = train_test_split(dtfm, labels, stratify = labels, test_size = test_size, random_state=random_state)
 
     #imputation of missing values
     train = train.fillna(train.mean())
@@ -148,11 +149,11 @@ def test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, log
 if __name__ == "__main__":
     # define what to run
     logger = True
-    plot_roc_auc = False
+    plot_roc_auc = True
     plot_boxplot = False
     plot_heatmap = False
-    high_threasholds = True
-    low_threasholds = True
+    high_threasholds = False
+    low_threasholds = False
     m_v_i = False
     n_threasholds = 10
 
@@ -244,7 +245,7 @@ if __name__ == "__main__":
             BLUE = 1 - i/(len(dtfm.columns) + 1)
             print("colors RED:{}, GREEN:{}, BLUE:{}".format(RED, GREEN, BLUE))
             # run roc_auc
-            [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, imp_dtfm,             dep_key='BLAST_D8', random_state=50, logger=logger)
+            [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
 
             # remove worst variable from dataframe
             drop_col = fi_dtfm.columns[-1]

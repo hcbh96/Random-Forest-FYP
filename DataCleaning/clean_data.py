@@ -20,7 +20,7 @@ from random import seed
 from random import randint
 
 #Read and display data in a dataframe
-dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final',       header=1,usecols=[4,5,32,33,34])
+dtfm=pd.read_excel('initial_data.xlsx', sheet_name='BD_Research_Fapesp_final', header=1,usecols=[4,5,32,33,34])
 
 #print out data head
 print('\nInfo:')
@@ -124,7 +124,6 @@ ax3.title.set_text('Cells Count D3')
 #save fig
 plt.savefig('HistOfDepVars')
 
-
 """
 There is nothing that spikes concern about the output variables they all seem to follow a Gaussian distribution going on visual inspection.
 
@@ -152,6 +151,7 @@ print(corr_cliv)
 Using this Tutorial to help with this section
 
 https://towardsdatascience.com/visualizing-data-with-pair-plots-in-python-f228cf529166"""
+
 
 # import a visualisation library
 import seaborn as sns
