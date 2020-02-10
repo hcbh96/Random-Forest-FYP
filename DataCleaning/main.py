@@ -3,14 +3,14 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from evaluate_model import evaluate_model
+from evaluate_model import evaluate_model, performance_assessor
 from sklearn.metrics import accuracy_score, confusion_matrix, recall_score, roc_auc_score, multilabel_confusion_matrix
 from collections import Counter
 from confusion_matrix import plot_confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 
 # Set random seed to ensure reproducible runs
-RSEED = 50
+RSEED = 30
 
 dtfm=pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1')
 
@@ -21,16 +21,10 @@ dtfm = dtfm.drop(columns=['ORDEM','DATA','AMOSTRA','REPLICATA','ANIMAL','PARTIDA
 print("Describe Output Vars: \n {}".format(dtfm["BLAST_D8"].describe()))
 """
 One of the thigns i need to do is categorise the output data
-I propose 4 categories 1-4
 
 Where:
 - 0 is bad quality 0 - 50%
 - 1 is good quality 50 - 100%
-
-Blast_D8 is the most important measurement:
-    -
-    -
-    -
 
 I will use the following statistics to make the decsion:
 
@@ -49,8 +43,6 @@ max     90.140845   53.623188   269.000000
 For BLAST_D8:
     0 < 21.475320
     1 >= 21.475320
-
-1. BLAST_D8 (0-1)
 
 """
 # Update Labels in Blast_D8 and CLIV
@@ -82,7 +74,6 @@ print("Test Shape: {}".format(test.shape))
 
 """
 Train decision tree on data with unlimited depth to check for overfitting
-
 """
 
 # Make a decision tree and train
@@ -94,7 +85,7 @@ print('Decision tree has {} nodes with maximum depth {}.'.format(tree.tree_.node
 
 
 """
-Aseess decision tree performance
+Assess decision tree performance
 
 I would expect this to overfit but we want to make sure
 """
@@ -105,24 +96,6 @@ probs = tree.predict_proba(test)[:, 1]
 
 train_predictions = tree.predict(train)
 predictions = tree.predict(test)
-
-confusion = confusion_matrix(test_labels,predictions)
-
-print("Confusion Matrix:\n{}".format(confusion))
-
-accuracy = accuracy_score(test_labels, predictions)
-print("Classification Accuracy: {}".format(accuracy))
-
-sensitivity = recall_score(test_labels, predictions, average='micro')
-print("Classification Sensitivity: {}".format(sensitivity))
-
-print(f'Train ROC AUC Score: {roc_auc_score(train_labels, train_probs)}')
-print(f'Test ROC AUC  Score: {roc_auc_score(test_labels, probs)}')
-
-print(f'Baseline ROC AUC: {roc_auc_score(test_labels, [1 for _ in range(len(test_labels))])}')
-
-print(Counter(probs))
-print(Counter(predictions))
 
 # evaluate model
 evaluate_model(predictions, probs, train_predictions, train_probs, test_labels, train_labels, title='Tree ROC Curve')
@@ -198,8 +171,8 @@ for ind_tree in model.estimators_:
     n_nodes.append(ind_tree.tree_.node_count)
     max_depths.append(ind_tree.tree_.max_depth)
 
-print(f'Average number of nodes {int(np.mean(n_nodes))}')
-print(f'Average maximum depth {int(np.mean(max_depths))}')
+print('Average number of nodes: {}'.format(int(np.mean(n_nodes))))
+print('Average maximum depth: {}'.format(int(np.mean(max_depths))))
 
 """
 Average number of nodes 59
@@ -213,24 +186,9 @@ train_rf_probs = model.predict_proba(train)[:, 1]
 rf_predictions = model.predict(test)
 rf_probs = model.predict_proba(test)[:, 1]
 
-# Make probability predictions
-
-confusion = confusion_matrix(test_labels,rf_predictions)
-print("Confusion Matrix:\n{}".format(confusion))
-
-accuracy = accuracy_score(test_labels, rf_predictions)
-print("Classification Accuracy: {}".format(accuracy))
-
-sensitivity = recall_score(test_labels, rf_predictions, average='micro')
-print("Classification Sensitivity: {}".format(sensitivity))
-
 # evaluate model
 evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs, test_labels, train_labels, title='Forest ROC')
 
-# Plot confusion matrix
-cm = confusion_matrix(test_labels, rf_predictions)
-plot_confusion_matrix(cm, classes = ['Poor Health', 'Good Health'],
-                       title = 'Forest Confusion Matrix')
 
 """
 Produces the following:
@@ -309,8 +267,8 @@ for ind_tree in best_model.estimators_:
     n_nodes.append(ind_tree.tree_.node_count)
     max_depths.append(ind_tree.tree_.max_depth)
 
-print(f'Average number of nodes {int(np.mean(n_nodes))}')
-print(f'Average maximum depth {int(np.mean(max_depths))}')
+print('Average number of nodes: {}'.format(int(np.mean(n_nodes))))
+print('Average maximum depth: {}'.format(int(np.mean(max_depths))))
 
 evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs,test_labels, train_labels, title='Optimised Forest ROC Curve')
 
