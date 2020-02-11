@@ -11,10 +11,11 @@ In this file I want to:
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier
-from evaluate_model import evaluate_model
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from evaluate_model import evaluate_model, performance_assessor
 from confusion_matrix import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix
+import graphviz
 
 # Set random seed to ensure reproducible runs
 RSEED = 30
@@ -106,6 +107,16 @@ predictions = tree.predict(test)
 
 # evaluate model
 evaluate_model(predictions, probs, train_predictions, train_probs, test_labels, train_labels, title='Tree ROC Curve')
+
+# print other metrics
+performance_assessor(predictions, probs, train_predictions, train_probs, test_labels, train_labels, logger=True)
+
+# display example decision tree
+export_graphviz(tree, out_file='tree.dot',
+                filled=True, rounded=True,
+                special_characters=True)
+
+print('\033[94m' + "To view decision tree example run the following command in terminal:\ndot -Tpng tree.dot -o tree.png" + '\033[0m')
 
 # Plot confusion matrix
 cm = confusion_matrix(test_labels, predictions)

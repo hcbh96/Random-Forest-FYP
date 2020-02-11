@@ -65,7 +65,7 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
         'min_samples_split': [2, 5, 10],
         'bootstrap': [True, False]
     }
-    # Estimator for use in random search
+    # Estimator for use in random search TODO: does this work with model as input?
     estimator = RandomForestClassifier(random_state = random_state)
     # Create the random search model
     rs = RandomizedSearchCV(estimator, param_grid, n_jobs = -1,
@@ -149,12 +149,13 @@ def test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, log
 if __name__ == "__main__":
     # define what to run
     logger = True
+    save_fig = False
     plot_roc_auc = True
-    plot_boxplot = False
-    plot_heatmap = False
-    high_threasholds = False
-    low_threasholds = False
-    m_v_i = False
+    plot_boxplot = True
+    plot_heatmap = True
+    high_threasholds = True
+    low_threasholds = True
+    m_v_i = True
     n_threasholds = 10
 
     #cols to drop
@@ -186,23 +187,31 @@ if __name__ == "__main__":
         plt.ylabel('ROC_AUC')
         plt.xlabel('Threashold')
         plt.ylim(0,1)
-        plt.show()
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_optimised_threashold')
+        else:
+            plt.show()
 
     # plot box plot of most important to least important vars
     if plot_boxplot == True:
         boxplot = fi_dtfm.drop('mean').boxplot(rot=90)
         plt.ylabel('Blastocyst Threashold')
         plt.xlabel('Feature')
-        plt.tight_layout()
-        plt.show()
+        if save_fig:
+            plt.savefig('var_imp_box_whisker')
+        else:
+            plt.show()
 
     # plot heatmap of most to least important vars
     if plot_heatmap:
         sns.heatmap(fi_dtfm)
         plt.xlabel('Feature')
         plt.ylabel('Blastocyt Threashold')
-        plt.tight_layout()
-        plt.show()
+        if save_fig:
+            plt.savefig('var_imp_heatmap')
+        else:
+            plt.show()
 
     imp_dtfm = dtfm.copy()
     # run roc_auc multiple times
@@ -231,8 +240,11 @@ if __name__ == "__main__":
         plt.xlabel('Threashold')
         plt.ylim(0,1)
         plt.legend(drop_cols, ncol=4)
-        plt.show()
-
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_drop_most_imp')
+        else:
+            plt.show()
 
     imp_dtfm = dtfm.copy()
     # run roc_auc multiple times
@@ -261,8 +273,11 @@ if __name__ == "__main__":
         plt.xlabel('Threashold')
         plt.ylim(0,1)
         plt.legend(drop_cols, ncol=4)
-        plt.show()
-
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_drop_least_imp')
+        else:
+            plt.show()
 
     if m_v_i == True:
         # plot for integrity vs motility
@@ -281,4 +296,8 @@ if __name__ == "__main__":
         plt.xlabel('Threashold')
         plt.ylim(0,1)
         plt.legend(['Integrity','Motility'])
-        plt.show()
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_int_v_mot')
+        else:
+            plt.show()

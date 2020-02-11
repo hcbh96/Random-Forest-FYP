@@ -10,7 +10,7 @@ import numpy as np
 import seaborn as sea
 import matplotlib.pyplot as plt
 
-def pair_plot_func(dtfm, plot=True):
+def pair_plot_func(dtfm, save_fig=False, title='pair_plot.png'):
     """
     This function can be used to produce pair plots where the
     upper half is a scatter plot, diagonal is a histogram,
@@ -46,9 +46,10 @@ def pair_plot_func(dtfm, plot=True):
     grid.map_lower(sea.kdeplot, cmap = plt.cm.Reds)
 
     # Set title
-    if plot:
+    if save_fig == True:
+        plt.savefig(title)
+    else:
         plt.show()
-
 
 
 
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     pair_plot = True
     # read in dataframe
     dtfm = pd.read_excel('cleaned_data.xlsx', sheet_name='Sheet1', index_col=0)
-
     # create pair plot of output vars
-    pair_plot_func(dtfm[['BLAST_D8', 'CLIV', 'CELLS_COUNT']], plot=pair_plot)
+    if pair_plot:
+        pair_plot_func(dtfm[['BLAST_D8', 'CLIV', 'CELLS_COUNT']])
 

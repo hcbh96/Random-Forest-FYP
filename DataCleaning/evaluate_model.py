@@ -1,7 +1,7 @@
 from sklearn.metrics import recall_score, precision_score, roc_auc_score, roc_curve, accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
 
-def evaluate_model(predictions, probs, train_predictions, train_probs, test_labels, train_labels, title='ROC Plot'):
+def evaluate_model(predictions, probs, train_predictions, train_probs, test_labels, train_labels, title='ROC Plot', save_fig=False):
     """Compare machine learning model to baseline performance.
     Computes statistics and shows ROC curve."""
 
@@ -37,9 +37,12 @@ def evaluate_model(predictions, probs, train_predictions, train_probs, test_labe
     plt.plot(model_fpr, model_tpr, 'r', label = 'model')
     plt.legend();
     plt.xlabel('False Positive Rate'); plt.ylabel('True Positive Rate'); plt.title(title);
-    plt.savefig(title)
+    if save_fig == True:
+        plt.savefig(title)
+    else:
+        plt.show()
 
-def performance_assessor(labels, predictions, average='micro', logger=False):
+def performance_assessor(predictions, probs, train_predictions, train_probs, test_labels, train_labels, average='micro', logger=False):
     """Returns metrics assessing the performance of a classifier
 
     USAGE: performance_assessor(labels, predictions, average='micro', logger=False)
@@ -61,26 +64,26 @@ def performance_assessor(labels, predictions, average='micro', logger=False):
         ]
     """
     # calc metrics
-    confusion = confusion_matrix(labels,predictions)
-    accuracy = accuracy_score(labels, predictions)
-    sensitivity = recall_score(labels, predictions, average='micro')
-    test_roc_auc = roc_auc_score(labels, predictions)
-    baseline_roc_auc = roc_auc_score(labels, [1 for _ in range(len(labels))])
+    test_accuracy = accuracy_score(test_labels, predictions)
+    train_accuracy = accuracy_score(train_labels, train_predictions)
+    test_sensitivity = recall_score(test_labels, predictions, average='micro')
+    train_sensitivity = recall_score(train_labels, train_predictions, average='micro')
+    test_roc_auc = roc_auc_score(test_labels, probs)
+    train_roc_auc = roc_auc_score(train_labels, train_probs)
 
     #log results
     if logger:
-        print("Confusion Matrix:\n{}".format(confusion))
-        print("Classification Accuracy: {}".format(accuracy))
-        print("Classification Sensitivity: {}".format(sensitivity))
-        print('Test ROC AUC  Score: {}'.format(test_roc_auc))
-        print('Baseline ROC AUC: {}'.format(baseline_roc_auc))
+        print("Train Accuracy: {}, Test Accuracy: {}".format(train_accuracy, test_accuracy))
+        print("Train Sensitivity: {}, Test Sensitivity: {}".format(train_sensitivity, test_sensitivity))
+        print('Train ROC AUC  Score: {}, Test ROC AUC Score: {}'.format(train_roc_auc, test_roc_auc))
 
 
     return [
-            confusion,
-            accuracy,
-            sensitivity,
+            train_accuracy,
+            test_accuracy,
+            train_sensitivity,
+            test_sensitivity,
+            train_roc_auc,
             test_roc_auc,
-            baseline_roc_auc,
             ]
 

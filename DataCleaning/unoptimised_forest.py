@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from evaluate_model import evaluate_model
+from evaluate_model import evaluate_model, performance_assessor
 from confusion_matrix import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix
 
@@ -118,6 +118,8 @@ rf_probs = model.predict_proba(test)[:, 1]
 # evaluate model
 evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs, test_labels, train_labels, title='Forest ROC')
 
+# performance assessor
+performance_assessor(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs, test_labels, train_labels, logger=True)
 
 # Plot confusion matrix
 cm = confusion_matrix(test_labels, rf_predictions)

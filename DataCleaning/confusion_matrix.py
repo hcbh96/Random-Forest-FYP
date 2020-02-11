@@ -6,7 +6,8 @@ import numpy as np
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',
-                          cmap=plt.cm.Oranges):
+                          cmap=plt.cm.Blues,
+                          save_fig=False):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
@@ -41,4 +42,9 @@ def plot_confusion_matrix(cm, classes,
     plt.tight_layout()
     plt.ylabel('True label', size = 18)
     plt.xlabel('Predicted label', size = 18)
-    plt.savefig(title)
+
+    # if savefig set to true save the fig else show
+    if save_fig:
+        plt.savefig(title)
+    else:
+        plt.show()

@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from confusion_matrix import plot_confusion_matrix
-from evaluate_model import evaluate_model
+from evaluate_model import evaluate_model, performance_assessor
 from sklearn.metrics import confusion_matrix
 
 # Set random seed to ensure reproducible runs
@@ -125,6 +125,9 @@ print('Average number of nodes: {}'.format(int(np.mean(n_nodes))))
 print('Average maximum depth: {}'.format(int(np.mean(max_depths))))
 
 evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs,test_labels, train_labels, title='Optimised Forest ROC Curve')
+
+# print other metrics
+performance_assessor(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs, test_labels, train_labels, logger=True)
 
 # Plot confusion matrix
 cm = confusion_matrix(test_labels, rf_predictions)
