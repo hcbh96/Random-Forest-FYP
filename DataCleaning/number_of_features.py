@@ -17,7 +17,6 @@ if __name__ == '__main__':
     save_fig = False
     number_of_vars_rf = True
     number_of_vars_tree = False
-    heat_plot_runs = False
     n_threasholds = 30
     n_variables = 1
 
@@ -163,46 +162,3 @@ if __name__ == '__main__':
         else:
             plt.show()
 
-    # copy original dataframe
-    imp_dtfm = dtfm.copy()
-    # run roc_auc multiple times
-    if heat_plot_runs:
-        drop_cols = ['Basis']
-        # set up loop
-        for i in range(len(dtfm.columns) - n_variables):
-            RED = i/(len(dtfm.columns)+1)
-            GREEN = 0
-            BLUE = 1 - i/(len(dtfm.columns) + 1)
-            print("colors RED:{}, GREEN:{}, BLUE:{}".format(RED, GREEN, BLUE))
-            # run roc_auc
-            [
-                fi_dtfm,
-                roc_auc_arr,
-                roc_auc_train_arr,
-                precision_arr,
-                precision_train_arr,
-                recall_arr,
-                recall_train_arr,
-                accuracy_arr,
-                accuracy_train_arr,
-            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
-
-            # remove worst variable from dataframe
-            drop_col = fi_dtfm.columns[-1]
-            drop_cols.append('{}:{}'.format(i,drop_col))
-            print("Cols left: {}".format(len(fi_dtfm.columns)))
-            print('Dropped Column {}: {}'.format(i,drop_col))
-            imp_dtfm = imp_dtfm.drop(columns=[drop_col])
-            # save roc_auc
-            plt.plot(threasholds, roc_auc_arr, color=[RED, GREEN, BLUE])
-
-        # plot roc_auc for various for various threasholds
-        plt.ylabel('ROC_AUC')
-        plt.xlabel('Threashold')
-        plt.ylim(0,1)
-        plt.legend(drop_cols, ncol=4)
-        plt.tight_layout()
-        if save_fig:
-            plt.savefig('roc_auc_drop_least_imp')
-        else:
-            plt.show()
