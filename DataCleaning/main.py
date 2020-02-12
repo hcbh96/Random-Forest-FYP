@@ -9,4 +9,9 @@ exec(compile(open('correlation_heatmap.py', "rb").read(), 'correlation_heatmap.p
 exec(compile(open('decision_tree.py', "rb").read(), 'decision_tree.py', 'exec'))
 exec(compile(open('unoptimised_forest.py', "rb").read(), 'unoptimised_forest.py', 'exec'))
 exec(compile(open('optimised_forest.py', "rb").read(), 'optimised_forest.py', 'exec'))
-exec(compile(open('roc_auc.py', "rb").read(), 'roc_auc.py', 'exec'))
+exec(compile(open('drop_var_auc_roc.py', "rb").read(), 'drop_var_auc_roc.py', 'exec'))
+exec(compile(open('most_important_vars.py', "rb").read(), 'most_important_vars.py', 'exec'))
+exec(compile(open('number_of_features.py', "rb").read(), 'number_of_features.py', 'exec'))
+
+
+

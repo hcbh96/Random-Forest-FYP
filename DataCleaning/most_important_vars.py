@@ -3,12 +3,12 @@ if __name__ == "__main__":
     import numpy as np
     import matplotlib.pyplot as plt
     from sklearn.tree import DecisionTreeClassifier
-    from roc_auc import test_threasholds
+    from test_threasholds import test_threasholds
 
     # define what to run
     logger = True
     save_fig = False
-    tree_plot_roc_auc = False
+    tree_plot_roc_auc = True
     tree_plot_boxplot = True
     tree_plot_heatmap = True
     rf_plot_roc_auc = True

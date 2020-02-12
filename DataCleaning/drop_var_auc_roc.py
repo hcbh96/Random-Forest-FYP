@@ -5,7 +5,7 @@ affect the classification measurments
 """
 
 if __name__ == '__main__':
-    from roc_auc import test_threasholds
+    from test_threasholds import test_threasholds
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
