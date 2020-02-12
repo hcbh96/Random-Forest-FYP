@@ -15,8 +15,10 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.tree import DecisionTreeClassifier
+from evaluate_model import evaluate_model
 
-def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=False):
+def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier, test_size=0.3, random_state=np.random, logger=False):
     """Returns the roc_auc for an optimised Random Forest
     Trained and tested over a passed in dataset
 
@@ -55,18 +57,29 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
 
     # Features for feature importances
     features = list(train.columns)
+    c_name = classifier.__name__
+    if c_name == 'RandomForestClassifier':
+           # Hyperparameter grid
+        param_grid = {
+            'n_estimators': np.linspace(10, 200).astype(int),
+            'max_depth': [None] + list(np.linspace(3, 20).astype(int)),
+            'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
+            'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
+            'min_samples_split': [2, 5, 10],
+            'bootstrap': [True, False]
+        }
+    elif c_name == 'DecisionTreeClassifier':
+           # Hyperparameter grid
+        param_grid = {
+            'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
+            'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
+            'min_samples_split': [2, 5, 10],
+        }
+    else:
+        raise ValueError('That is not a supported Classifier')
 
-    # Hyperparameter grid
-    param_grid = {
-        'n_estimators': np.linspace(10, 200).astype(int),
-        'max_depth': [None] + list(np.linspace(3, 20).astype(int)),
-        'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
-        'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
-        'min_samples_split': [2, 5, 10],
-        'bootstrap': [True, False]
-    }
-    # Estimator for use in random search TODO: does this work with model as input?
-    estimator = RandomForestClassifier(random_state = random_state)
+    # Estimator for use in random search
+    estimator = classifier(random_state = random_state)
     # Create the random search model
     rs = RandomizedSearchCV(estimator, param_grid, n_jobs = -1,
                          scoring = 'roc_auc', cv = 3,
@@ -82,16 +95,15 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
     # Try using the best model
     best_model = rs.best_estimator_
 
-    train_rf_predictions = best_model.predict(train)
-    train_rf_probs = best_model.predict_proba(train)[:, 1]
+    train_predictions = best_model.predict(train)
+    train_probs = best_model.predict_proba(train)[:, 1]
 
-    rf_predictions = best_model.predict(test)
-    rf_probs = best_model.predict_proba(test)[:, 1]
+    predictions = best_model.predict(test)
+    probs = best_model.predict_proba(test)[:, 1]
 
-    # calculate roc_auc and append to roc_auc_arr
-    auc = roc_auc_score(test_labels, rf_probs)
-    if logger:
-        print("ROC AUC Score=",auc)
+    [baseline, results, train_results ] = evaluate_model(predictions, probs,
+            train_predictions, train_probs,
+            test_labels, train_labels, logger=logger)
 
     # calculate variables of most importance in model
     fi_model = pd.DataFrame({'feature': features,
@@ -100,15 +112,29 @@ def roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=Fals
     if logger:
         print("Features importance in RF:\n{}".format(fi_model.sort_values('importance', 0, ascending=True)))
 
-    return [auc, fi_model]
+    return [
+            baseline, results,
+            train_results, fi_model,
+            ]
 
-
-def test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, logger=False):
+def test_threasholds(threasholds, dtfm, classifier=RandomForestClassifier, dep_key='BLAST_D8', random_state=50, logger=False):
     if logger== True:
         print("Threasholds at which we'll calculte ROC_AUC: \n {}".format(threasholds))
 
+
     # ROC_AUC array
     roc_auc_arr = []
+    roc_auc_train_arr = []
+    # Precision
+    precision_arr = []
+    precision_train_arr = []
+    # Recall
+    recall_arr = []
+    recall_train_arr = []
+    #Accuracy
+    accuracy_arr = []
+    accuracy_train_arr = []
+    # feature importance
     fi_dtfm = pd.DataFrame()
     dtfm_index = 0
 
@@ -122,15 +148,33 @@ def test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, log
         dtfm_temp[dep_key] = dtfm_temp[dep_key].where(dtfm[dep_key] < threashold, other=1)
 
         # run roc_auc func
-        [score, fi] = roc_auc(dtfm_temp, dep_key, random_state=random_state, logger=logger)
+        [
+        baseline, results,
+        train_results, fi_model,
+        ] = roc_auc(dtfm_temp, dep_key, classifier=classifier, random_state=random_state, logger=logger)
 
         # create first index
         if dtfm_index == 0:
-            fi_dtfm.insert(0, 'feature', fi.feature)
+            fi_dtfm.insert(0, 'feature', fi_model.feature)
 
-        fi_dtfm.insert(dtfm_index + 1, round(threashold, 2),fi.importance)
+        fi_dtfm.insert(dtfm_index + 1, round(threashold, 2),fi_model.importance)
         dtfm_index += 1
-        roc_auc_arr.append(score)
+
+        # ROC_AUC
+        roc_auc_arr.append(results['roc'])
+        roc_auc_train_arr.append(train_results['roc'])
+
+        # Precision
+        precision_arr.append(results['precision'])
+        precision_train_arr.append(train_results['precision'])
+
+        # Recall
+        recall_arr.append(results['recall'])
+        recall_train_arr.append(train_results['recall'])
+
+        # Precision
+        accuracy_arr.append(results['accuracy'])
+        accuracy_train_arr.append(train_results['accuracy'])
 
     # redefine index
     fi_dtfm = fi_dtfm.set_index('feature')
@@ -139,8 +183,15 @@ def test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, log
     fi_dtfm = fi_dtfm.transpose()
 
     return [
-            roc_auc_arr,
             fi_dtfm,
+            roc_auc_arr,
+            roc_auc_train_arr,
+            precision_arr,
+            precision_train_arr,
+            recall_arr,
+            recall_train_arr,
+            accuracy_arr,
+            accuracy_train_arr,
            ]
 
 
@@ -150,13 +201,16 @@ if __name__ == "__main__":
     # define what to run
     logger = True
     save_fig = False
-    plot_roc_auc = True
-    plot_boxplot = True
-    plot_heatmap = True
-    high_threasholds = True
-    low_threasholds = True
-    m_v_i = True
+    tree_plot_roc_auc = True
+    tree_plot_boxplot = True
+    tree_plot_heatmap = True
+    rf_plot_roc_auc = False
+    rf_plot_boxplot = False
+    rf_plot_heatmap = False
+    high_threasholds = False
+    low_threasholds = False
     n_threasholds = 10
+
 
     #cols to drop
     discrete_cols = ['ORDEM','DATA','AMOSTRA','REPLICATA','ANIMAL','PARTIDA',   'CELLS_COUNT', 'CLIV']
@@ -178,11 +232,21 @@ if __name__ == "__main__":
     std = desc_blast['std']
     threasholds = np.linspace(mean - 1.5 * std, mean + 1.5 * std, n_threasholds)
 
-    # test threashold norm
-    [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
+    # test threashold RF
+    [
+        fi_dtfm,
+        roc_auc_arr,
+        roc_auc_train_arr,
+        precision_arr,
+        precision_train_arr,
+        recall_arr,
+        recall_train_arr,
+        accuracy_arr,
+        accuracy_train_arr,
+    ] = test_threasholds(threasholds, dtfm, classifier=DecisionTreeClassifier, dep_key='BLAST_D8', random_state=50, logger=logger)
 
     # plot roc_auc curve against threashold values
-    if plot_roc_auc == True:
+    if tree_plot_roc_auc == True:
         plt.plot(threasholds, roc_auc_arr)
         plt.ylabel('ROC_AUC')
         plt.xlabel('Threashold')
@@ -194,7 +258,7 @@ if __name__ == "__main__":
             plt.show()
 
     # plot box plot of most important to least important vars
-    if plot_boxplot == True:
+    if tree_plot_boxplot == True:
         boxplot = fi_dtfm.drop('mean').boxplot(rot=90)
         plt.ylabel('Blastocyst Threashold')
         plt.xlabel('Feature')
@@ -204,7 +268,52 @@ if __name__ == "__main__":
             plt.show()
 
     # plot heatmap of most to least important vars
-    if plot_heatmap:
+    if tree_plot_heatmap:
+        sns.heatmap(fi_dtfm)
+        plt.xlabel('Feature')
+        plt.ylabel('Blastocyt Threashold')
+        if save_fig:
+            plt.savefig('var_imp_heatmap')
+        else:
+            plt.show()
+
+    # test threashold RF
+    [
+        fi_dtfm,
+        roc_auc_arr,
+        roc_auc_train_arr,
+        precision_arr,
+        precision_train_arr,
+        recall_arr,
+        recall_train_arr,
+        accuracy_arr,
+        accuracy_train_arr,
+    ] = test_threasholds(threasholds, dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
+
+    # plot roc_auc curve against threashold values
+    if rf_plot_roc_auc == True:
+        plt.plot(threasholds, roc_auc_arr)
+        plt.ylabel('ROC_AUC')
+        plt.xlabel('Threashold')
+        plt.ylim(0,1)
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_optimised_threashold')
+        else:
+            plt.show()
+
+    # plot box plot of most important to least important vars
+    if rf_plot_boxplot == True:
+        boxplot = fi_dtfm.drop('mean').boxplot(rot=90)
+        plt.ylabel('Blastocyst Threashold')
+        plt.xlabel('Feature')
+        if save_fig:
+            plt.savefig('var_imp_box_whisker')
+        else:
+            plt.show()
+
+    # plot heatmap of most to least important vars
+    if rf_plot_heatmap:
         sns.heatmap(fi_dtfm)
         plt.xlabel('Feature')
         plt.ylabel('Blastocyt Threashold')
@@ -224,7 +333,17 @@ if __name__ == "__main__":
             BLUE = 1 - i/(len(dtfm.columns) + 1)
             print("colors RED:{}, GREEN:{}, BLUE:{}".format(RED, GREEN, BLUE))
             # run roc_auc
-            [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
+            [
+                fi_dtfm,
+                roc_auc_arr,
+                roc_auc_train_arr,
+                precision_arr,
+                precision_train_arr,
+                recall_arr,
+                recall_train_arr,
+                accuracy_arr,
+                accuracy_train_arr,
+            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
 
             # remove worst variable from dataframe
             drop_col = fi_dtfm.columns[0]
@@ -246,6 +365,8 @@ if __name__ == "__main__":
         else:
             plt.show()
 
+
+
     imp_dtfm = dtfm.copy()
     # run roc_auc multiple times
     if low_threasholds == True:
@@ -257,7 +378,17 @@ if __name__ == "__main__":
             BLUE = 1 - i/(len(dtfm.columns) + 1)
             print("colors RED:{}, GREEN:{}, BLUE:{}".format(RED, GREEN, BLUE))
             # run roc_auc
-            [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
+            [
+                fi_dtfm,
+                roc_auc_arr,
+                roc_auc_train_arr,
+                precision_arr,
+                precision_train_arr,
+                recall_arr,
+                recall_train_arr,
+                accuracy_arr,
+                accuracy_train_arr,
+            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
 
             # remove worst variable from dataframe
             drop_col = fi_dtfm.columns[-1]
@@ -279,25 +410,5 @@ if __name__ == "__main__":
         else:
             plt.show()
 
-    if m_v_i == True:
-        # plot for integrity vs motility
-        integrity_dtfm = dtfm.drop(columns=motility_cols)
-        motility_dtfm = dtfm.drop(columns=integrity_cols)
 
-        # test integrity
-        [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, integrity_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
-        plt.plot(threasholds, roc_auc_arr)
 
-        [roc_auc_arr, fi_dtfm] = test_threasholds(threasholds, motility_dtfm,dep_key='BLAST_D8', random_state=50, logger=logger)
-        plt.plot(threasholds, roc_auc_arr)
-
-        #plot integrity vs motility
-        plt.ylabel('ROC_AUC')
-        plt.xlabel('Threashold')
-        plt.ylim(0,1)
-        plt.legend(['Integrity','Motility'])
-        plt.tight_layout()
-        if save_fig:
-            plt.savefig('roc_auc_int_v_mot')
-        else:
-            plt.show()
