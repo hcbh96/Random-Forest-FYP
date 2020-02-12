@@ -15,8 +15,8 @@ if __name__ == '__main__':
     # define what to run
     logger = True
     save_fig = False
-    rf_drop_var_plot = False
-    tree_drop_var_plot = False
+    rf_drop_var_plot = True
+    tree_drop_var_plot = True
     n_threasholds = 30
     n_variables = 1
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
 
             # remove worst variable from dataframe
-            drop_col = fi_dtfm.columns[-1]
+            drop_col = fi_dtfm.columns[0]
             drop_cols.append('{}:{}'.format(i,drop_col))
             print("Cols left: {}".format(len(fi_dtfm.columns)))
             print('Dropped Column {}: {}'.format(i,drop_col))
@@ -75,6 +75,8 @@ if __name__ == '__main__':
             plt.plot(threasholds, roc_auc_arr, color=[RED, GREEN, BLUE])
 
         # plot roc_auc for various for various threasholds
+        print("Dropped Cols: {}".format(drop_cols))
+        print("Remaining Cols: {}".format(fi_dtfm.columns))
         plt.ylabel('ROC_AUC')
         plt.xlabel('Threashold')
         plt.ylim(0,1)
@@ -111,7 +113,7 @@ if __name__ == '__main__':
             ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger, classifier=DecisionTreeClassifier)
 
             # remove worst variable from dataframe
-            drop_col = fi_dtfm.columns[-1]
+            drop_col = fi_dtfm.columns[0]
             drop_cols.append('{}:{}'.format(i,drop_col))
             print("Cols left: {}".format(len(fi_dtfm.columns)))
             print('Dropped Column {}: {}'.format(i,drop_col))
@@ -120,6 +122,8 @@ if __name__ == '__main__':
             plt.plot(threasholds, roc_auc_arr, color=[RED, GREEN, BLUE])
 
         # plot roc_auc for various for various threasholds
+        print("Dropped Cols: {}".format(drop_cols))
+        print("Remaining Cols: {}".format(fi_dtfm.columns))
         plt.ylabel('AUC ROC')
         plt.xlabel('Threashold')
         plt.ylim(0,1)
