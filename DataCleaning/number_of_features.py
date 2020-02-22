@@ -17,6 +17,8 @@ if __name__ == '__main__':
     save_fig = False
     number_of_vars_rf = True
     number_of_vars_tree = True
+    number_of_vars_rf_low = True
+    number_of_vars_tree_low = True
     n_threasholds = 30
     n_variables = 1
 
@@ -155,6 +157,128 @@ if __name__ == '__main__':
         plt.ylabel('Mean Value')
         plt.xlabel('Number of Variables')
         plt.ylim((0.6, 1))
+        plt.legend(['Accuracy', 'Recall', 'Precision', 'ROC'])
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_drop_least_imp')
+        else:
+            plt.show()
+
+
+    # copy dataframe
+    imp_dtfm = dtfm.copy()
+    # run roc_auc multiple times
+    if number_of_vars_rf_low:
+        # test means for evaluation
+        m_acc = []
+        m_rec = []
+        m_pre = []
+        m_auc = []
+        # record features left
+        n_cols = []
+
+        # set up loop
+        for i in range(len(dtfm.columns) - n_variables):
+            # run roc_auc
+            [
+                fi_dtfm,
+                roc_auc_arr,
+                roc_auc_train_arr,
+                precision_arr,
+                precision_train_arr,
+                recall_arr,
+                recall_train_arr,
+                accuracy_arr,
+                accuracy_train_arr,
+            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger)
+
+            # remove worst variable from dataframe
+            drop_col = fi_dtfm.columns[-1]
+            print("Cols left: {}".format(len(fi_dtfm.columns)))
+            print('Dropped Column {}: {}'.format(i,drop_col))
+            imp_dtfm = imp_dtfm.drop(columns=[drop_col])
+
+            # save results
+            m_acc.append(np.mean(accuracy_arr))
+            m_rec.append(np.mean(recall_arr))
+            m_pre.append(np.mean(precision_arr))
+            m_auc.append(np.mean(roc_auc_arr))
+            n_cols.append(len(dtfm.columns) - i)
+
+            # print mean and SD
+            print("Accuracy Mean: {}, SD: {}".format(np.mean(accuracy_arr), np.std(accuracy_arr)))
+            print("Recall Mean: {}, SD: {}".format(np.mean(recall_arr), np.std(recall_arr)))
+            print("Precision Mean: {}, SD: {}".format(np.mean(precision_arr), np.std(precision_arr)))
+            print("ROC AUC Mean: {}, SD: {}".format(np.mean(roc_auc_arr),np.std(roc_auc_arr)))
+        # plot roc_auc for various for various threasholds
+        plt.plot(n_cols, m_acc, 'go--')
+        plt.plot(n_cols, m_rec, 'bo--')
+        plt.plot(n_cols, m_pre, 'co--')
+        plt.plot(n_cols, m_auc, 'ro--')
+        plt.ylabel('Mean Value')
+        plt.xlabel('Number of Variables')
+        plt.ylim((0.45, 1))
+        plt.legend(['Accuracy', 'Recall', 'Precision', 'ROC'])
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig('roc_auc_drop_least_imp')
+        else:
+            plt.show()
+
+
+    # cp dataframe
+    imp_dtfm = dtfm.copy()
+    # run roc_auc multiple times
+    if number_of_vars_tree_low:
+        # test means for evaluation
+        m_acc = []
+        m_rec = []
+        m_pre = []
+        m_auc = []
+        # record features left
+        n_cols = []
+
+        # set up loop
+        for i in range(len(dtfm.columns) - n_variables):
+            # run roc_auc
+            [
+                fi_dtfm,
+                roc_auc_arr,
+                roc_auc_train_arr,
+                precision_arr,
+                precision_train_arr,
+                recall_arr,
+                recall_train_arr,
+                accuracy_arr,
+                accuracy_train_arr,
+            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, classifier=DecisionTreeClassifier, logger=logger)
+
+            # remove worst variable from dataframe
+            drop_col = fi_dtfm.columns[-1]
+            print("Cols left: {}".format(len(fi_dtfm.columns)))
+            print('Dropped Column {}: {}'.format(i,drop_col))
+            imp_dtfm = imp_dtfm.drop(columns=[drop_col])
+
+            # save results
+            m_acc.append(np.mean(accuracy_arr))
+            m_rec.append(np.mean(recall_arr))
+            m_pre.append(np.mean(precision_arr))
+            m_auc.append(np.mean(roc_auc_arr))
+            n_cols.append(len(dtfm.columns) - i)
+
+            # print mean and SD
+            print("Accuracy Mean: {}, SD: {}".format(np.mean(accuracy_arr), np.std(accuracy_arr)))
+            print("Recall Mean: {}, SD: {}".format(np.mean(recall_arr), np.std(recall_arr)))
+            print("Precision Mean: {}, SD: {}".format(np.mean(precision_arr), np.std(precision_arr)))
+            print("ROC AUC Mean: {}, SD: {}".format(np.mean(roc_auc_arr),np.std(roc_auc_arr)))
+        # plot roc_auc for various for various threasholds
+        plt.plot(n_cols, m_acc, 'go--')
+        plt.plot(n_cols, m_rec, 'bo--')
+        plt.plot(n_cols, m_pre, 'co--')
+        plt.plot(n_cols, m_auc, 'ro--')
+        plt.ylabel('Mean Value')
+        plt.xlabel('Number of Variables')
+        plt.ylim((0.45, 1))
         plt.legend(['Accuracy', 'Recall', 'Precision', 'ROC'])
         plt.tight_layout()
         if save_fig:
