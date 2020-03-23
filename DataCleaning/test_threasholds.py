@@ -18,7 +18,9 @@ import seaborn as sns
 from sklearn.tree import DecisionTreeClassifier
 from evaluate_model import evaluate_model
 
-def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier, test_size=0.3, random_state=np.random, logger=False):
+def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier,
+        test_size=0.3, random_state=np.random, logger=False,
+        optimise=True):
     """Returns the roc_auc for an optimised Random Forest
     Trained and tested over a passed in dataset
 
@@ -59,7 +61,7 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier, test_size=0.3, 
     features = list(train.columns)
     c_name = classifier.__name__
     if c_name == 'RandomForestClassifier':
-           # Hyperparameter grid
+        # Hyperparameter grid
         param_grid = {
             'n_estimators': np.linspace(10, 200).astype(int),
             'max_depth': [None] + list(np.linspace(3, 20).astype(int)),
@@ -69,7 +71,7 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier, test_size=0.3, 
             'bootstrap': [True, False]
         }
     elif c_name == 'DecisionTreeClassifier':
-           # Hyperparameter grid
+        # Hyperparameter grid
         param_grid = {
             'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
             'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
@@ -87,7 +89,8 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier, test_size=0.3, 
                          random_state=random_state)
     # Fit
     rs.fit(train, train_labels)
-
+    print("Train head: \n{}".format(train.head()))
+    print("Train Labels: \n{}".format(train_labels))
     # print result
     if logger:
         print("Best params:\n{}".format(rs.best_params_))
