@@ -16,10 +16,10 @@ if __name__ == '__main__':
     import seaborn as sns
 
     # define what to run
-    logger = True
+    logger = False
     save_fig = False
     seven_permutations = True
-    n_threasholds = 30
+    n_threasholds = 10
 
 
     #cols to drop
@@ -41,21 +41,23 @@ if __name__ == '__main__':
     desc_blast = blast_d8.describe()
     mean = desc_blast['mean']
     std = desc_blast['std']
-    threasholds = np.linspace(mean - 1.5 * std, mean + 1.5 * std, n_threasholds)
+    threasholds = [mean]
 
     #remove blast_d8 from dtfm (N.B it will be added in later)
     dtfm = dtfm.drop(columns=["BLAST_D8"])
 
     # make permutations containing 7 vars
     total_cols = dtfm.columns
-    print("dtfm num cols: {}".format(len(total_cols)))
+    if logger:
+        print("dtfm num cols: {}".format(len(total_cols)))
 
     if seven_permutations:
         def find_subsets(s,n):
             return list(itertools.combinations(s,n))
 
         subsets = find_subsets(total_cols, 7)
-        print("Number of subsets: {}".format(len(subsets)))
+        if logger:
+            print("Number of subsets: {}".format(len(subsets)))
 
         # test means for evaluation
         m_acc = []
@@ -83,14 +85,33 @@ if __name__ == '__main__':
         worst_pre = 1
         worst_auc = 1
 
+        # number of exel rows in each file
+        file_number = 0
+        save_loop = 17000
+        save_dtfm = pd.DataFrame()
+
+        save_count = 0
+
         # set up loop and create progress bar
         for subset in tqdm(subsets):
+            save_loop = save_loop - 1
+            if save_loop <= 0:
+                save_loop = 17000
+                save_count = save_count + 1
+                # write to execel empty save_dtfm
+                save_dtfm.to_excel('excel_permutations/permutations_{}.xlsx'.format(file_number))
+                file_number = file_number + 1
+                save_dtfm = pd.DataFrame()
+
             use_cols = np.asarray(subset)
-            print(use_cols)
             imp_dtfm = dtfm[use_cols]
+
+            if logger:
+                print("Use Cols: {}".format(use_cols))
 
             # add blast_d8 back into dataframe
             imp_dtfm['BLAST_D8'] = blast_d8
+
             # run roc_auc
             [
                 fi_dtfm,
@@ -102,7 +123,7 @@ if __name__ == '__main__':
                 recall_train_arr,
                 accuracy_arr,
                 accuracy_train_arr,
-            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50)
+            ]  = test_threasholds(threasholds, imp_dtfm, dep_key='BLAST_D8', random_state=50, logger=logger, optimise=False)
 
             # calc metrics
             acc_mean = np.mean(accuracy_arr)
@@ -142,12 +163,29 @@ if __name__ == '__main__':
                 worst_auc = auc_mean
                 worst_permutations["auc"] = subset
 
+            save_dtfm = save_dtfm.append({
+                    "Accuracy": acc_mean,
+                    "Recall": rec_mean,
+                    "Precision": pre_mean,
+                    "AUC": auc_mean,
+                    "Var 0": use_cols[0],
+                    "Var 1": use_cols[1],
+                    "Var 2": use_cols[2],
+                    "Var 3": use_cols[3],
+                    "Var 4": use_cols[4],
+                    "Var 5": use_cols[5],
+                    "Var 6": use_cols[6],
+                },ignore_index=True)
 
             # print mean and SD
-            print("Accuracy Mean: {}, SD: {}".format(np.mean(accuracy_arr), np.std(accuracy_arr)))
-            print("Recall Mean: {}, SD: {}".format(np.mean(recall_arr), np.std(recall_arr)))
-            print("Precision Mean: {}, SD: {}".format(np.mean(precision_arr), np.std(precision_arr)))
-            print("ROC AUC Mean: {}, SD: {}".format(np.mean(roc_auc_arr),np.std(roc_auc_arr)))
+            if logger:
+                print("Accuracy Mean: {}, SD: {}".format(np.mean(accuracy_arr), np.std(accuracy_arr)))
+                print("Recall Mean: {}, SD: {}".format(np.mean(recall_arr), np.std(recall_arr)))
+                print("Precision Mean: {}, SD: {}".format(np.mean(precision_arr), np.std(precision_arr)))
+                print("ROC AUC Mean: {}, SD: {}".format(np.mean(roc_auc_arr),np.std(roc_auc_arr)))
+
+        # save the final save_dtfm
+        save_dtfm.to_excel('excel_permutations/permutations_{}.xlsx'.format(file_number))
 
         # plot roc_auc for various for various threasholds
         plt_data = pd.DataFrame({
@@ -158,8 +196,9 @@ if __name__ == '__main__':
                 })
 
         # print best and worst permutations
-        print("Best Permutations:\n{}".format(best_permutations))
-        print("Worst Permutations:\n{}".format(worst_permutations))
+        if logger:
+            print("Best Permutations:\n{}".format(best_permutations))
+            print("Worst Permutations:\n{}".format(worst_permutations))
 
         # create box plot
         ax = sns.boxplot(data=plt_data)

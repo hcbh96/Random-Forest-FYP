@@ -18,13 +18,12 @@ import seaborn as sns
 from sklearn.tree import DecisionTreeClassifier
 from evaluate_model import evaluate_model
 
-def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier,
-        test_size=0.3, random_state=np.random, logger=False,
-        optimise=True):
-    """Returns the roc_auc for an optimised Random Forest
+def find_best_params(dtfm, labels_col, classifier=RandomForestClassifier,
+        test_size=0.3, random_state=np.random, logger=False):
+    """Returns the best params in terms of roc_auc for an optimised Random Forest
     Trained and tested over a passed in dataset
 
-    USGAE: roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=logger)
+    USGAE: find_best_params(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=logger)
 
     INPUTS:
         dtfm: dataframe to train and test model on
@@ -57,25 +56,23 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier,
     train = train.fillna(train.mean())
     test = test.fillna(test.mean())
 
-    # Features for feature importances
-    features = list(train.columns)
     c_name = classifier.__name__
     if c_name == 'RandomForestClassifier':
         # Hyperparameter grid
         param_grid = {
-            'n_estimators': np.linspace(10, 200).astype(int),
-            'max_depth': [None] + list(np.linspace(3, 20).astype(int)),
+            'n_estimators': np.linspace(10, 200, 10).astype(int),
+            'max_depth': [None] + list(np.linspace(3, 20, 10).astype(int)),
             'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
-            'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
-            'min_samples_split': [2, 5, 10],
-            'bootstrap': [True, False]
-        }
+            'max_leaf_nodes': [None] + list(np.linspace(10, 50, 10).astype(int)),
+            'min_samples_split': [2],
+            'bootstrap': [True],
+            }
     elif c_name == 'DecisionTreeClassifier':
         # Hyperparameter grid
         param_grid = {
             'max_features': ['auto', 'sqrt', None] + list(np.arange(0.5, 1, 0.1)),
-            'max_leaf_nodes': [None] + list(np.linspace(10, 50, 500).astype(int)),
-            'min_samples_split': [2, 5, 10],
+            'max_leaf_nodes': [None] + list(np.linspace(10, 50, 10).astype(int)),
+            'min_samples_split': [2],
         }
     else:
         raise ValueError('That is not a supported Classifier')
@@ -89,20 +86,76 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier,
                          random_state=random_state)
     # Fit
     rs.fit(train, train_labels)
-    print("Train head: \n{}".format(train.head()))
-    print("Train Labels: \n{}".format(train_labels))
+
+    print("Best params:\n{}".format(rs.best_params_))
     # print result
     if logger:
         print("Best params:\n{}".format(rs.best_params_))
 
-    # Try using the best model
-    best_model = rs.best_estimator_
+    return rs.best_params_
 
-    train_predictions = best_model.predict(train)
-    train_probs = best_model.predict_proba(train)[:, 1]
 
-    predictions = best_model.predict(test)
-    probs = best_model.predict_proba(test)[:, 1]
+def roc_auc(dtfm, labels_col, c_params, classifier=RandomForestClassifier,
+        test_size=0.3, random_state=np.random, logger=False, optimise=True):
+    """Returns the roc_auc for an optimised Random Forest
+    Trained and tested over a passed in dataset
+
+    USGAE: roc_auc(dtfm, labels_col, test_size=0.3, random_state=np.random, logger=logger)
+
+    INPUTS:
+        dtfm: dataframe to train and test model on
+        labels_col: column title containing the classification flag
+
+    **Optional** (default)
+        test_size: (0.3) proportion of data set to use for testing
+        random_state: (np.random) seed used by the random number generator
+        logger: (False) wheather to log outputs or not
+
+
+    OUTPUT:
+        roc_auc: (scalar) Area under the receiver operating
+            charachteristic curve
+    """
+
+    dtfm_labels = dtfm.pop(labels_col)
+    # separate the labels from the data
+    labels = np.array(dtfm_labels)
+
+    # print value counts so we can see how split affects data
+    if logger:
+        print("Output value count:\n {}".format(dtfm_labels.value_counts()))
+
+    # split data into train and test sets split% test
+    train, test, train_labels, test_labels = train_test_split(dtfm, labels, stratify = labels, test_size = test_size, random_state=random_state)
+
+    #imputation of missing values
+    train = train.fillna(train.mean())
+    test = test.fillna(test.mean())
+
+    # Features for feature importances
+    features = list(train.columns)
+    c_name = classifier.__name__
+    if c_name == 'RandomForestClassifier':
+        # tune model
+        model = classifier(n_estimators=c_params['n_estimators'], max_depth=c_params['max_depth'],
+                max_features=c_params['max_features'], max_leaf_nodes=c_params['max_leaf_nodes'],
+                min_samples_split=c_params['min_samples_split'], bootstrap=c_params['bootstrap'],
+                random_state = random_state)
+    elif c_name == 'DecisionTreeClassifier':
+        # tune model
+        model = classifier(max_features=c_params['max_features'], max_leaf_nodes=c_params['max_leaf_nodes'],
+                min_samples_split=c_params['min_samples_split'], random_state=random_state)
+    else:
+        raise ValueError('That is not a supported Classifier')
+
+    # Fit
+    model.fit(train, train_labels)
+
+    train_predictions = model.predict(train)
+    train_probs = model.predict_proba(train)[:, 1]
+
+    predictions = model.predict(test)
+    probs = model.predict_proba(test)[:, 1]
 
     [baseline, results, train_results ] = evaluate_model(predictions, probs,
             train_predictions, train_probs,
@@ -110,7 +163,7 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier,
 
     # calculate variables of most importance in model
     fi_model = pd.DataFrame({'feature': features,
-                'importance': best_model.feature_importances_})
+                'importance': model.feature_importances_})
 
     if logger:
         print("Features importance in RF:\n{}".format(fi_model.sort_values('importance', 0, ascending=True)))
@@ -120,7 +173,8 @@ def roc_auc(dtfm, labels_col, classifier=RandomForestClassifier,
             train_results, fi_model,
             ]
 
-def test_threasholds(threasholds, dtfm, classifier=RandomForestClassifier, dep_key='BLAST_D8', random_state=50, logger=False):
+def test_threasholds(threasholds, dtfm, classifier=RandomForestClassifier,
+        dep_key='BLAST_D8', random_state=50, logger=False, optimise=True):
     if logger== True:
         print("Threasholds at which we'll calculte ROC_AUC: \n {}".format(threasholds))
 
@@ -140,7 +194,8 @@ def test_threasholds(threasholds, dtfm, classifier=RandomForestClassifier, dep_k
     # feature importance
     fi_dtfm = pd.DataFrame()
     dtfm_index = 0
-
+    # set base for c_params
+    c_params = {'n_estimators': 94, 'min_samples_split': 2, 'max_leaf_nodes': 36, 'max_features': 0.5, 'max_depth': 18, 'bootstrap': True}
     #create loop
     for threashold in threasholds:
         if logger == True:
@@ -150,11 +205,17 @@ def test_threasholds(threasholds, dtfm, classifier=RandomForestClassifier, dep_k
         dtfm_temp[dep_key] = dtfm_temp[dep_key].where(dtfm[dep_key] >= threashold, other=0)
         dtfm_temp[dep_key] = dtfm_temp[dep_key].where(dtfm[dep_key] < threashold, other=1)
 
-        # run roc_auc func
+        # bool trigger for multiple optimisations
+        if optimise:
+            dtfm_optimise = dtfm_temp.copy()
+            c_params = find_best_params(dtfm_optimise, dep_key, classifier=classifier, random_state=random_state, logger=logger)
+
+        # maybe run optimise once then use params from optimise for subsequent threasholds
         [
-        baseline, results,
-        train_results, fi_model,
-        ] = roc_auc(dtfm_temp, dep_key, classifier=classifier, random_state=random_state, logger=logger)
+            baseline, results,
+            train_results, fi_model,
+        ] = roc_auc(dtfm_temp, dep_key, c_params, classifier=classifier,
+                random_state=random_state, logger=logger, optimise=optimise)
 
         # create first index
         if dtfm_index == 0:

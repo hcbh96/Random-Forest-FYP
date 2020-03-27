@@ -1,5 +1,6 @@
 from sklearn.metrics import recall_score, precision_score, roc_auc_score, roc_curve, accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
+import numpy as np
 
 def evaluate_model(predictions, probs, train_predictions, train_probs,
         test_labels, train_labels, title='ROC Plot',
@@ -9,8 +10,8 @@ def evaluate_model(predictions, probs, train_predictions, train_probs,
 
     baseline = {}
 
-    baseline['recall'] = recall_score(test_labels, [1 for _ in range(len(test_labels))])
-    baseline['precision'] = precision_score(test_labels, [1 for _ in range(len(test_labels))])
+    baseline['recall'] = recall_score(test_labels, [np.random.randint(2) for _ in range(len(test_labels))])
+    baseline['precision'] = precision_score(test_labels, [np.random.randint(2) for _ in range(len(test_labels))])
     baseline['roc'] = 0.5
 
     results = {}
