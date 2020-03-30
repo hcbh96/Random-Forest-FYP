@@ -21,9 +21,10 @@ if __name__ == '__main__':
 
     #run time options
     logger = False
-    variable_boxplot = True
+    metric_plot = False
+    variable_boxplot = False
     decision_tree = True
-    predictors_100 = True
+    predictors_100 = False
     save_fig=False
 
     # read in all dataframes and combine
@@ -44,9 +45,22 @@ if __name__ == '__main__':
     if logger:
         print('Head:\n{}'.format(dtfm.head()))
         print("Mean Values:\n{}".format(dtfm.mean()))
+        print("Standard Deviation Values:\n{}".format(dtfm.std()))
 
     # specify variable list
     var_list = ['AI','PI','ALTO','FRAG_CRO','MOT_PRE','MOT_POS','CONC_CAMARA','VF','AD','VAP','VSL','VCL','ALH','BCF','STR','LIN','MOTILE_PCT','PROGRESSIVE_PCT','RAPID_PCT','MEDIUM_PCT', 'SLOW_PCT','STATIC_PCT']
+
+    # plot simple dtfm
+    if metric_plot:
+        dtfm[['AUC','Accuracy', 'Precision','Recall']].boxplot()
+        plt.xticks(rotation=90)
+        plt.xlabel('Measurment')
+        plt.ylabel('Value')
+        if save_fig:
+            plt.savefig('permutations_metric_plot')
+        else:
+            plt.show()
+
     # boxplot of separate dtfms
     if variable_boxplot:
         dtfm_plot = pd.DataFrame()

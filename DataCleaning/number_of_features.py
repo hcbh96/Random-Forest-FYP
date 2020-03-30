@@ -14,13 +14,13 @@ if __name__ == '__main__':
     from tqdm import tqdm
 
     # define what to run
-    logger = False
+    logger = True
     save_fig = False
     number_of_vars_rf = True
-    number_of_vars_tree = True
-    number_of_vars_rf_low = True
-    number_of_vars_tree_low = True
-    roc_comp = True
+    number_of_vars_tree = False
+    number_of_vars_rf_low = False
+    number_of_vars_tree_low = False
+    roc_comp = False
     n_threasholds = 30
     n_variables = 1
 
