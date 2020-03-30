@@ -6,7 +6,7 @@ if __name__ == "__main__":
     from test_threasholds import test_threasholds
 
     # define what to run
-    logger = True
+    logger = False
     save_fig = False
     tree_plot_roc_auc = True
     tree_plot_boxplot = True

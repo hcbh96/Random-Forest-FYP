@@ -14,7 +14,7 @@ if __name__ == '__main__':
     from tqdm import tqdm
 
     # define what to run
-    logger = True
+    logger = False
     save_fig = False
     number_of_vars_rf = True
     number_of_vars_tree = False

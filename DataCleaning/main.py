@@ -12,6 +12,7 @@ exec(compile(open('optimised_forest.py', "rb").read(), 'optimised_forest.py', 'e
 exec(compile(open('drop_var_auc_roc.py', "rb").read(), 'drop_var_auc_roc.py', 'exec'))
 exec(compile(open('most_important_vars.py', "rb").read(), 'most_important_vars.py', 'exec'))
 exec(compile(open('number_of_features.py', "rb").read(), 'number_of_features.py', 'exec'))
-
+exec(compile(open('permutations_eda.py', "rb").read(), 'permutations_eda.py', 'exec'))
+exec(compile(open('casa_vs_other.py', "rb").read(), 'casa_vs_other.py', 'exec'))
 
 

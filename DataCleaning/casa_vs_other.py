@@ -13,8 +13,8 @@ if __name__ == '__main__':
     from tqdm import tqdm
 
     # define what to run
-    logger = True
-    save_fig = False
+    logger = False
+    save_fig = True
     full_set = True
     casa_other = True
     n_threasholds = 30
