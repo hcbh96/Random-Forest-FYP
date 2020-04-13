@@ -8,12 +8,12 @@ if __name__ == "__main__":
     # define what to run
     logger = True
     save_fig = False
-    tree_plot_roc_auc = False
-    tree_plot_boxplot = False
-    tree_plot_heatmap = False
-    rf_plot_roc_auc = False
-    rf_plot_boxplot = False
-    rf_plot_heatmap = False
+    tree_plot_roc_auc = True
+    tree_plot_boxplot = True
+    tree_plot_heatmap = True
+    rf_plot_roc_auc = True
+    rf_plot_boxplot = True
+    rf_plot_heatmap = True
     base_case_predictions=True
     n_threasholds = 30
 
